@@ -103,9 +103,13 @@ float snoise(vec2 v)
 		uniform float time;
 		uniform float offset;
 
+		float radius(vec3 p) {
+			return sqrt(p.x*p.x + p.y*p.y);
+		}
+
 		void main() {
 		    vUv = uv;
-		    vec3 newposition = position + normal*offset*snoise(position.xy);
+		    vec3 newposition = position + normal*50.*sin(3.14*radius(position)/180.+time);
 		   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
 
 		}

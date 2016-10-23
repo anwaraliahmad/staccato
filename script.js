@@ -10,9 +10,9 @@ require([], function(){
   document.body.appendChild( renderer.domElement );
   // setup a scene and camera
   var scene = new THREE.Scene();
-  var camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 4000);
-  camera.position.z = 3;
-  camera.position.y = 9;
+  var camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 10000);
+  camera.position.z = 1700;
+  camera.position.y = 300;
 
 
   // Set up a clock
@@ -40,7 +40,7 @@ require([], function(){
   //////////////////////////////////////////////////////////////////////////////////
   //    add an object and make it move          //
   //////////////////////////////////////////////////////////////////////////////////  
-  var geometry = new THREE.SphereGeometry(3000, 64, 64);  
+  var geometry = new THREE.SphereGeometry(3000, 32, 32);  
   var uniforms = {  
     texture: { type: 't', value: THREE.ImageUtils.loadTexture('./vendor/img/skydome.jpg') }
   };
@@ -70,7 +70,7 @@ require([], function(){
         },
 
       }
-  var wavesGeo = new THREE.PlaneGeometry(1000, 1000, 64, 64);
+  var wavesGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
   var wavesMaterial = new THREE.ShaderMaterial( { 
     wireframe: true,
     blending: THREE.NormalBlending,
@@ -100,9 +100,10 @@ require([], function(){
     mouse.y = (event.clientY / window.innerHeight) - 0.5
   }, false)
   
+  
   onRenderFcts.push(function(delta, now){
-    camera.position.x += (mouse.x*5 - camera.position.x) * (delta*3)
-    camera.position.y += (mouse.y*5 - camera.position.y) * (delta*3)
+    camera.position.x += (mouse.x*3000 - camera.position.x) * (delta*3)
+    camera.position.y += (mouse.y*3000 - camera.position.y) * (delta*3)
     camera.lookAt( scene.position )
   })
 
@@ -126,8 +127,8 @@ require([], function(){
     var deltaMsec = Math.min(200, nowMsec - lastTimeMsec)
     lastTimeMsec  = nowMsec
     delta = clock.getDelta();
-    wavesMaterial.uniforms['time'].value += delta;
-    wavesMaterial.uniforms['offset'].value += .1*Math.sin(wavesMaterial.uniforms['time'].value);
+    wavesMaterial.uniforms['time'].value += delta*5;
+    wavesMaterial.uniforms['offset'].value += Math.sin(wavesMaterial.uniforms['time'].value);
     // call each update function
     onRenderFcts.forEach(function(onRenderFct){
       onRenderFct(deltaMsec/1000, nowMsec/1000)
