@@ -11,8 +11,8 @@ require([], function(){
   // setup a scene and camera
   var scene = new THREE.Scene();
   var camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 10000);
-  camera.position.z = 1700;
-  camera.position.y = 300;
+  camera.position.z = 1000;
+  camera.position.y = 150;
 
 
   // Set up a clock
@@ -54,7 +54,7 @@ require([], function(){
   skyBox = new THREE.Mesh(geometry, material);  
   skyBox.scale.set(-1, 1, 1);  
   skyBox.rotation.order = 'XZY'; 
-  skyBox.rotation.y -= Math.PI/2; 
+  skyBox.rotation.y -= Math.PI/8; 
   skyBox.renderDepth = 1000.0;  
   scene.add(skyBox); 
 
@@ -76,12 +76,14 @@ require([], function(){
     blending: THREE.NormalBlending,
     side: THREE.DoubleSide, 
     uniforms: waves_uniforms,
-    vertexShader:   document.getElementById('vertexShader').textContent,
-    fragmentShader: document.getElementById('fragmentShader').textContent
+    vertexShader:   document.getElementById('wave-vertex').textContent,
+    fragmentShader: document.getElementById('wave-fragment').textContent
   });
+
 
   var waves = new THREE.Mesh(wavesGeo, wavesMaterial);
   waves.rotation.x += Math.PI/2;
+  waves.position.y = 450;
   scene.add(waves);
 
 
@@ -102,9 +104,9 @@ require([], function(){
   
   
   onRenderFcts.push(function(delta, now){
-    camera.position.x += (mouse.x*3000 - camera.position.x) * (delta*3)
-    camera.position.y += (mouse.y*3000 - camera.position.y) * (delta*3)
-    camera.lookAt( scene.position )
+   // camera.position.x += (mouse.x*3000 - camera.position.x) * (delta*3)
+    //camera.position.y += (mouse.y*3000 - camera.position.y) * (delta*3)
+   // camera.lookAt( scene.position )
   })
 
   //////////////////////////////////////////////////////////////////////////////////
