@@ -11,7 +11,7 @@ require([], function(){
   // setup a scene and camera
   var scene = new THREE.Scene();
   var camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 10000);
-  camera.position.z = 1000;
+  camera.position.z = 800;
   camera.position.y = 150;
 
 
@@ -86,6 +86,36 @@ require([], function(){
   waves.position.y = 450;
   scene.add(waves);
 
+  var abyss_uniforms = {
+    time: {
+      type: "f",
+      value: 0.0
+    },
+    frequency: {
+      type: "f",
+      value: .1
+    },
+    amplitude: {
+      type: "f",
+      value: 10.0
+    }
+  };
+
+  var abyssGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
+
+  var abyssMaterial = new THREE.ShaderMaterial( { 
+    wireframe: true,
+    blending: THREE.NormalBlending,
+    side: THREE.DoubleSide, 
+    uniforms: abyss_uniforms,
+    vertexShader:   document.getElementById('abyss-vertex').textContent,
+    fragmentShader: document.getElementById('wave-fragment').textContent
+  });
+
+  var abyss = new THREE.Mesh(abyssGeo, abyssMaterial); 
+  abyss.rotation.x += Math.PI/2;
+  abyss.position.y += 25;
+  scene.add(abyss);
 
     /*
   onRenderFcts.push(function(delta, now){
@@ -104,9 +134,9 @@ require([], function(){
   
   
   onRenderFcts.push(function(delta, now){
-   // camera.position.x += (mouse.x*3000 - camera.position.x) * (delta*3)
-    //camera.position.y += (mouse.y*3000 - camera.position.y) * (delta*3)
-   // camera.lookAt( scene.position )
+    camera.position.x += (mouse.x*3000 - camera.position.x) * (delta*3)
+    camera.position.y += (mouse.y*3000 - camera.position.y) * (delta*3)
+    camera.lookAt( scene.position )
   })
 
   //////////////////////////////////////////////////////////////////////////////////
@@ -130,6 +160,7 @@ require([], function(){
     lastTimeMsec  = nowMsec
     delta = clock.getDelta();
     wavesMaterial.uniforms['time'].value += delta*5;
+    abyssMaterial.uniforms['time'].value += delta*5;
     wavesMaterial.uniforms['offset'].value += Math.sin(wavesMaterial.uniforms['time'].value);
     // call each update function
     onRenderFcts.forEach(function(onRenderFct){
