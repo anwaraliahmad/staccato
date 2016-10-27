@@ -58,11 +58,33 @@ require([], function(){
   skyBox.renderDepth = 1000.0;  
   scene.add(skyBox); 
 
+
+var sineWave = new Pizzicato.Sound({ 
+    source: 'wave', 
+    options: {
+        frequency: 14500
+    }
+});
+
+var lowPassFilter = new Pizzicato.Effects.LowPassFilter({
+    frequency: 400,
+    peak: 10
+});
+
+sineWave.addEffect(lowPassFilter);
+sineWave.play();
+
+
+
   // Waves wireframe
   var waves_uniforms =    {
         time: { // float initialized to 0
             type: "f", 
             value: 0.0 
+        },
+        frequency: {
+          type: "f",
+          value: sineWave.frequency
         },
         offset: {
           type: "f",
@@ -93,7 +115,7 @@ require([], function(){
     },
     frequency: {
       type: "f",
-      value: .1
+      value: sineWave.frequency
     },
     amplitude: {
       type: "f",

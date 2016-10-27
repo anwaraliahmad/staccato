@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <script src='vendor/three.js/build/three.js'></script>
+<script src="vendor/audio/pizzicato.min.js"></script>
+
 <script src="vendor/require.js/require.js"></script>
 <script src="vendor/three.js/examples/js/Detector.js"></script>
 <script src="vendor/threex.windowresize.js"></script>
+
 <link href="https://fonts.googleapis.com/css?family=Advent+Pro:100" rel="stylesheet">
 
 <link href="./styles.css" rel="stylesheet"/>
@@ -117,7 +120,7 @@
 	void main() {
 		vUv = uv;
 		float r = radius(position);
-		float d = 5.*snoise(vec2(position.xy)) * r/300. + 1.*sin(time*2.*3.14*frequency);
+		float d = 4.*snoise(vec2(position.xy)) * r/300. + 1.*sin(time*2.*3.14*frequency);
 		float displacement = - d*d - 3.0*r*r/5000.;
 		vec3 newposition = position + normal * displacement;
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
@@ -128,14 +131,14 @@
 	varying vec2 vUv;
 	uniform float time;
 	uniform float offset;
-
+	uniform float frequency;
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x + p.y*p.y);
 	}
 
 	void main() {
 	    vUv = uv;
-	    vec3 newposition = position + normal*50.*cos(3.14*radius(position)/180.+time);
+	    vec3 newposition = position + normal*5.*cos(2.*3.14*radius(position)*frequency+5.0*time);
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
 
 	}
