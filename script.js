@@ -64,7 +64,7 @@ require([], function(){
   var WAVE_DATA = [];   
   var context = Pizzicato.context;
   var analyser = context.createAnalyser();
-  var FFT = 1024;
+  var FFT = 2048;
   var FFT2 = FFT/2;
   analyser.fftSize = FFT;
   /*var sound = new Pizzicato.Sound('./vendor/audio/Prismatic.mp3', function() {
@@ -72,7 +72,7 @@ require([], function(){
     });
   sound.connect(analyser);*/
 
-   var sound = new Pizzicato.Sound('./vendor/audio/Prismatic.mp3', function() {
+   var sound = new Pizzicato.Sound('./vendor/audio/04_allegroConFuoco.mp3', function() {
     sound.connect(analyser);
     sound.play();
    });
@@ -169,7 +169,7 @@ require([], function(){
     side: THREE.DoubleSide, 
     uniforms: abyss_uniforms,
     vertexShader:   document.getElementById('abyss-vertex').textContent,
-    fragmentShader: document.getElementById('wave-fragment').textContent
+    fragmentShader: document.getElementById('abyss-fragment').textContent
   });
 
   var abyss = new THREE.Mesh(abyssGeo, abyssMaterial); 

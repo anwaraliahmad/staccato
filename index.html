@@ -109,6 +109,7 @@
 	}
 
 	varying vec2 vUv;
+	varying float d;
 	uniform float time;	
 	uniform float frequency[512];
 
@@ -119,27 +120,41 @@
 	void main() {
 		vUv = uv;
 		float r = radius(position);
-		float d = 4.*snoise(vec2(position.xy)) * r/300. + 1.*sin(r*2.*3.14/180.0+time)/5. + frequency[int(abs(position.x))]/25.;
-		float displacement = - d*d - r/100.;
+		d = 1.*snoise(vec2(position.xy)) * r/300. + 1.*sin(r*2.*3.14/180.0+time)/5. + frequency[int(abs(position.x))]/10.;
+		float displacement = + d*d + r/100.;
 		vec3 newposition = position + normal * displacement;
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
 	}
 </script>
 
+<script id="abyss-fragment" type="x-shader/x-fragment">
+	varying vec2 vUv;
+	varying float d; 
+	uniform float time;
+
+	void main() {
+
+	    // compose the colour using the UV coordinate
+	    // and modulate it with the noise like ambient occlusion
+	    gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0 )*abs(1./d);
+
+	}
+</script>
+
 <script id="wave-vertex" type="x-shader/x-vertex">
 	varying vec2 vUv;
+	varying float d; 
 	uniform float time;
-	uniform float frequency[512];
+	uniform float frequency[1000];
 	float radius(vec3 p) {
-		return sqrt(p.x*p.x + p.y*p.y);
+		return sqrt(2.*p.x*p.x + p.y*p.y);
 	}
 
 	void main() {
 	    vUv = uv;
-//	   	 int xP = int(position.x);
-	 		 float d = frequency[int(abs(position.x))];
+	 		 d = frequency[int(abs(radius(position)+time))];
 	   	 vec3 newposition = position - normal*d;
-	    // 20.*cos(2.*3.14*radius(position)/180.	+ time*frequency/18.);
+	    	// 20.*cos(2.*3.14*radius(position)/180.	+ time*frequency/18.);
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
 
 	}
@@ -147,13 +162,14 @@
 
 <script id="wave-fragment" type="x-shader/x-fragment">
 	varying vec2 vUv;
+	varying float d; 
 	uniform float time;
 
 	void main() {
 
 	    // compose the colour using the UV coordinate
 	    // and modulate it with the noise like ambient occlusion
-	    gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0 );
+	    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0 )*sin(abs(d*d*d*d));
 
 	}
 </script>
