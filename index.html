@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <script src='vendor/three.js/build/three.js'></script>
-<script src="vendor/audio/pizzicato.min.js"></script>
+<script src="vendor/audio/Pizzicato.js"></script>
 
 <script src="vendor/require.js/require.js"></script>
 <script src="vendor/three.js/examples/js/Detector.js"></script>
@@ -109,9 +109,8 @@
 	}
 
 	varying vec2 vUv;
-	uniform float time;
-	uniform float frequency;
-	uniform float amplitude;
+	uniform float time;	
+	uniform float frequency[512];
 
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x + p.x*p.x);
@@ -120,8 +119,8 @@
 	void main() {
 		vUv = uv;
 		float r = radius(position);
-		float d = 4.*snoise(vec2(position.xy)) * r/300. + 1.*sin(time*2.*3.14*frequency);
-		float displacement = - d*d - 3.0*r*r/5000.;
+		float d = 4.*snoise(vec2(position.xy)) * r/300. + 1.*sin(r*2.*3.14/180.0+time)/5. + frequency[int(abs(position.x))]/25.;
+		float displacement = - d*d - r/100.;
 		vec3 newposition = position + normal * displacement;
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
 	}
@@ -130,15 +129,17 @@
 <script id="wave-vertex" type="x-shader/x-vertex">
 	varying vec2 vUv;
 	uniform float time;
-	uniform float offset;
-	uniform float frequency;
+	uniform float frequency[512];
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x + p.y*p.y);
 	}
 
 	void main() {
 	    vUv = uv;
-	    vec3 newposition = position + normal*5.*cos(2.*3.14*radius(position)*frequency+5.0*time);
+//	   	 int xP = int(position.x);
+	 		 float d = frequency[int(abs(position.x))];
+	   	 vec3 newposition = position - normal*d;
+	    // 20.*cos(2.*3.14*radius(position)/180.	+ time*frequency/18.);
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
 
 	}

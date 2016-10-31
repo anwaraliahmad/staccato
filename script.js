@@ -24,6 +24,7 @@ require([], function(){
   // handle window resize events
   var winResize = new THREEx.WindowResize(renderer, camera)
 
+
   //////////////////////////////////////////////////////////////////////////////////
   //    default 3 points lightning          //
   //////////////////////////////////////////////////////////////////////////////////
@@ -58,33 +59,65 @@ require([], function(){
   skyBox.renderDepth = 1000.0;  
   scene.add(skyBox); 
 
+  ///////// Setting up Web Audio Context and Pizzicato.js sound //////////
+  var waveform_array, time_array;
+  var WAVE_DATA = [];   
+  var context = Pizzicato.context;
+  var analyser = context.createAnalyser();
+  var FFT = 1024;
+  var FFT2 = FFT/2;
+  analyser.fftSize = FFT;
+  /*var sound = new Pizzicato.Sound('./vendor/audio/Prismatic.mp3', function() {
+      sound.play();
+    });
+  sound.connect(analyser);*/
 
-var sineWave = new Pizzicato.Sound({ 
-    source: 'wave', 
-    options: {
-        frequency: 14500
-    }
+   var sound = new Pizzicato.Sound('./vendor/audio/Prismatic.mp3', function() {
+    sound.connect(analyser);
+    sound.play();
+   });
+
+
+/*
+  var sineWave = new Pizzicato.Sound({ 
+      source: 'wave',
+      options: {
+        frequency: 440
+      }
+  });
+
+  var tremolo = new Pizzicato.Effects.Tremolo({
+    speed: 7,
+    depth: 0.8,
+    mix: 0.8
+  });
+
+  var stereoPanner = new Pizzicato.Effects.StereoPanner({
+    pan: 0.0  
 });
 
-var lowPassFilter = new Pizzicato.Effects.LowPassFilter({
-    frequency: 400,
-    peak: 10
-});
+  sineWave.addEffect(stereoPanner);
 
-sineWave.addEffect(lowPassFilter);
-sineWave.play();
+  sineWave.addEffect(tremolo);
+  sineWave.attack = 0.5;
+  sineWave.release = 1;
+  sineWave.connect(analyser);
+  sineWave.play();*/
 
-
+ // time_array = new Uint8Array(FFT2);
+  waveform_array = new Float32Array(FFT2);
+  //analyser.getFloatFrequencyData(waveform_array);
+  console.log(analyser);
 
   // Waves wireframe
   var waves_uniforms =    {
         time: { // float initialized to 0
-            type: "f", 
-            value: 0.0 
+          type: "f", 
+          value: 0.0 
         },
         frequency: {
-          type: "f",
-          value: sineWave.frequency
+          type: "fv1",
+          value: waveform_array
         },
         offset: {
           type: "f",
@@ -92,6 +125,8 @@ sineWave.play();
         },
 
       }
+
+  //// WAVE GEOMETRY ////
   var wavesGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
   var wavesMaterial = new THREE.ShaderMaterial( { 
     wireframe: true,
@@ -114,14 +149,17 @@ sineWave.play();
       value: 0.0
     },
     frequency: {
-      type: "f",
-      value: sineWave.frequency
+      type: "fv1",
+      value: waveform_array
     },
+
     amplitude: {
       type: "f",
       value: 10.0
     }
   };
+
+  /// ABYSS GEOMETRY ///
 
   var abyssGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
 
@@ -176,14 +214,21 @@ sineWave.play();
   requestAnimationFrame(function animate(nowMsec){
     // keep looping
     requestAnimationFrame( animate );
+
     // measure time
     lastTimeMsec  = lastTimeMsec || nowMsec-1000/60
     var deltaMsec = Math.min(200, nowMsec - lastTimeMsec)
     lastTimeMsec  = nowMsec
+
     delta = clock.getDelta();
+
+    waveform_array = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatFrequencyData(waveform_array);
+    wavesMaterial.uniforms['frequency'].value = waveform_array;
+    abyssMaterial.uniforms['frequency'].value = waveform_array;
     wavesMaterial.uniforms['time'].value += delta*5;
     abyssMaterial.uniforms['time'].value += delta*5;
-    wavesMaterial.uniforms['offset'].value += Math.sin(wavesMaterial.uniforms['time'].value);
+    
     // call each update function
     onRenderFcts.forEach(function(onRenderFct){
       onRenderFct(deltaMsec/1000, nowMsec/1000)
