@@ -38,9 +38,7 @@ require([], function(){
   backLight.position.set(-0.5, -0.5, -2)
   scene.add( backLight )    
 
-  //////////////////////////////////////////////////////////////////////////////////
-  //    add an object and make it move          //
-  //////////////////////////////////////////////////////////////////////////////////  
+  ///// SKYDOME //////
   var geometry = new THREE.SphereGeometry(3000, 32, 32);  
   var uniforms = {  
     texture: { type: 't', value: THREE.ImageUtils.loadTexture('./vendor/img/skydome.jpg') }
@@ -67,47 +65,16 @@ require([], function(){
   var FFT = 2048;
   var FFT2 = FFT/2;
   analyser.fftSize = FFT;
-  /*var sound = new Pizzicato.Sound('./vendor/audio/Prismatic.mp3', function() {
-      sound.play();
-    });
-  sound.connect(analyser);*/
-
-   var sound = new Pizzicato.Sound('./vendor/audio/04_allegroConFuoco.mp3', function() {
-    sound.connect(analyser);
-    sound.play();
-   });
 
 
-/*
-  var sineWave = new Pizzicato.Sound({ 
-      source: 'wave',
-      options: {
-        frequency: 440
-      }
+  var sound = new Pizzicato.Sound('./vendor/audio/Prismatic.mp3', function() {
+  // Linking the sound to the AudioNode analyser
+  sound.connect(analyser);
+  sound.play();
+  
   });
 
-  var tremolo = new Pizzicato.Effects.Tremolo({
-    speed: 7,
-    depth: 0.8,
-    mix: 0.8
-  });
-
-  var stereoPanner = new Pizzicato.Effects.StereoPanner({
-    pan: 0.0  
-});
-
-  sineWave.addEffect(stereoPanner);
-
-  sineWave.addEffect(tremolo);
-  sineWave.attack = 0.5;
-  sineWave.release = 1;
-  sineWave.connect(analyser);
-  sineWave.play();*/
-
- // time_array = new Uint8Array(FFT2);
   waveform_array = new Float32Array(FFT2);
-  //analyser.getFloatFrequencyData(waveform_array);
-  console.log(analyser);
 
   // Waves wireframe
   var waves_uniforms =    {
@@ -115,15 +82,10 @@ require([], function(){
           type: "f", 
           value: 0.0 
         },
-        frequency: {
+        frequency: { // 32-bit float array of FFT generated frequencies
           type: "fv1",
           value: waveform_array
-        },
-        offset: {
-          type: "f",
-          value: 0.0
-        },
-
+        }
       }
 
   //// WAVE GEOMETRY ////
@@ -159,7 +121,7 @@ require([], function(){
     }
   };
 
-  /// ABYSS GEOMETRY ///
+  //// ABYSS GEOMETRY ////
 
   var abyssGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
 
@@ -176,12 +138,6 @@ require([], function(){
   abyss.rotation.x += Math.PI/2;
   abyss.position.y += 25;
   scene.add(abyss);
-
-    /*
-  onRenderFcts.push(function(delta, now){
-    mesh.rotateX(0.5 * delta);
-    mesh.rotateY(2.0 * delta);    
-  })*/
   
   //////////////////////////////////////////////////////////////////////////////////
   //    Camera Controls             //
@@ -200,7 +156,7 @@ require([], function(){
   })
 
   //////////////////////////////////////////////////////////////////////////////////
-  //    render the scene            //
+  //   render the scene            //
   //////////////////////////////////////////////////////////////////////////////////
   onRenderFcts.push(function(){
     renderer.render( scene, camera );   
@@ -222,6 +178,7 @@ require([], function(){
 
     delta = clock.getDelta();
 
+    // Updating the waveform array with the AudioNode
     waveform_array = new Float32Array(analyser.frequencyBinCount);
     analyser.getFloatFrequencyData(waveform_array);
     wavesMaterial.uniforms['frequency'].value = waveform_array;
