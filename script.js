@@ -13,21 +13,21 @@ require([], function(){
   var camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 10000);
   camera.position.z = 800;
   camera.position.y = 150;
-
-
-  // Set up a clock
   var clock = new THREE.Clock();
+  var winResize = new THREEx.WindowResize(renderer, camera);
 
-  // declare the rendering loop
-  var onRenderFcts= [];
-
-  // handle window resize events
-  var winResize = new THREEx.WindowResize(renderer, camera)
-
-
-  //////////////////////////////////////////////////////////////////////////////////
-  //    default 3 points lightning          //
-  //////////////////////////////////////////////////////////////////////////////////
+  ///////// Setting up Web Audio Context and Pizzicato.js sound //////////
+  var waveform_array, time_array;
+  var sumf = 0;
+  var sumi = 0;
+  var context = Pizzicato.context;
+  var analyser = context.createAnalyser();
+  var FFT = 512;
+  analyser.fftSize = FFT;
+  var mouse = {x : 0, y : 0};
+  /* 
+  * Using standard 3-point lighting technique
+  */ 
   
   var ambientLight= new THREE.AmbientLight( 0x020202 )
   scene.add( ambientLight)
@@ -38,7 +38,7 @@ require([], function(){
   backLight.position.set(-0.5, -0.5, -2)
   scene.add( backLight )    
 
-  ///// SKYDOME //////
+  /*********SKYDOME**********/
   var geometry = new THREE.SphereGeometry(3000, 32, 32);  
   var uniforms = {  
     texture: { type: 't', value: THREE.ImageUtils.loadTexture('./vendor/img/skydome.jpg') }
@@ -57,16 +57,6 @@ require([], function(){
   skyBox.renderDepth = 1000.0;  
   scene.add(skyBox); 
 
-  ///////// Setting up Web Audio Context and Pizzicato.js sound //////////
-  var waveform_array, time_array;
-  var sumf = 0;
-  var sumi = 0;
-  var context = Pizzicato.context;
-  var analyser = context.createAnalyser();
-  var FFT = 512;
-  analyser.fftSize = FFT;
-  var mouse = {x : 0, y : 0};
-
 
   var sound = new Pizzicato.Sound('./vendor/audio/Prismatic.mp3', function() {
   // Linking the sound to the AudioNode analyser
@@ -75,16 +65,8 @@ require([], function(){
   
   });
 
-/*
-  var sound = new Pizzicato.Sound(function(e) {
-    console.log("Sound function", e.outputBuffer);
-  })*/  
- // waveform_array = new UintArray(analyser.frequencyBinCount);
   waveform_array = new Float32Array(analyser.frequencyBinCount);
-  console.log(typeof waveform_array);
-  for (var i = 0; i < waveform_array.length; i++) {
-    waveform_array[i] = Math.random()*255;
-  }
+
   // Waves wireframe
   var waves_uniforms =    {
         time: { // float initialized to 0
@@ -101,7 +83,10 @@ require([], function(){
         }
   }
 
-  //// WAVE GEOMETRY ////
+  /*************WAVE GEOMETRY***************
+  * A plane with a "wavy" shader applied to it.
+  * Uses 
+  */
   var wavesGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
   var wavesMaterial = new THREE.ShaderMaterial( { 
     wireframe: true,
@@ -118,7 +103,15 @@ require([], function(){
   waves.position.y = 200;
   scene.add(waves);
 
-  var abyss_uniforms = {
+
+  /***************ABYSS GEOMETRY**************I
+  * A plane with an applied rocky, somewhat ravine like 
+  * shader. Uses noise functions for the rockiness.
+  */ 
+
+  var abyssGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
+  
+  var abyssUniforms = {
     time: {
       type: "f",
       value: 0.0
@@ -132,16 +125,11 @@ require([], function(){
       value: 1.0
     }
   };
-
-  //// ABYSS GEOMETRY ////
-
-  var abyssGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
-
   var abyssMaterial = new THREE.ShaderMaterial( { 
     wireframe: true,
     blending: THREE.NormalBlending,
     side: THREE.DoubleSide, 
-    uniforms: abyss_uniforms,
+    uniforms: abyssUniforms,
     vertexShader:   document.getElementById('abyss-vertex').textContent,
     fragmentShader: document.getElementById('wave-fragment').textContent
   });
@@ -152,15 +140,21 @@ require([], function(){
   scene.add(abyss);
   
   
-  /////////////////////////////////////////////
-  ////////// HEARTBEAT GEOMETRY ////////////////
-  ////////////////////////////////////////////
-  var heartGeometry = new THREE.SphereGeometry(200, 32, 32);
+  /*************** HEART GEOMETRY *************
+  * A sphere that "beats" and shifts color with the song.
+  * Uses vertex displacement with respect to the Fourier transform 
+  * data of the audio stream.
+  */ 
+  var heartGeometry = new THREE.SphereGeometry(250, 128, 128);
   var arry = []
   var heartbeat_uniforms =    {
     time: { // float initialized to 0
       type: "f", 
       value: 0.0 
+    },
+    minDecibels: {
+      type: "f",
+      value: analyser.minDecibels
     },
     frequency: { // byte array of FFT frequencies
       type: "fv1",
@@ -169,92 +163,56 @@ require([], function(){
   }
   var heartMaterial = new THREE.ShaderMaterial({
     wireframe: true,
+    transparent: true,
+    opacity: 0.5,
     uniforms: heartbeat_uniforms,
     vertexShader:   document.getElementById('heart-vertex').textContent,
-    fragmentShader: document.getElementById('wave-fragment').textContent
+    fragmentShader: document.getElementById('heart-fragment').textContent
   })
+
   var heart = new THREE.Mesh(heartGeometry, heartMaterial);
   heart.position.y = 350;
   scene.add(heart);
 
-  //////////////////////////////////////////////////////////////////////////////////
-  //   render the scene            //
-  //////////////////////////////////////////////////////////////////////////////////
-  onRenderFcts.push(function(){
-    renderer.render( scene, camera );   
-  })
 
-  onRenderFcts.push(function(delta, now){
-    camera.position.x += (mouse.x*3000 - camera.position.x) * (delta*3)
-    camera.position.y += (mouse.y*3000 - camera.position.y) * (delta*3)
-    camera.lookAt( scene.position )
-  })
-
-  ///////////////////////////////////////////////////////////////
-  ////////////// Average frequency of waveforms /////////////////
-  ///////////////////////////////////////////////////////////////
+  // Calculating average (used to compare between batches of Fourier data)
   function avg(arr) {
     var s = 0; 
-    for (var i = arr.length/2-1; i < arr.length; i++) {
+    for (var i = 0; i < arr.length; i++) {
       s += arr[i];
     }
     return s/arr.length;
   }
-  //////////////////////////////////////////////////////////////////////////////////
-  //    Camera Controls             //
-  //////////////////////////////////////////////////////////////////////////////////
-  document.addEventListener('mousemove', function(event){
-    mouse.x = (event.clientX / window.innerWidth ) - 0.5
-    mouse.y = (event.clientY / window.innerHeight) - 0.5
-  }, false);
-  //////////////////////////////////////////////////////////////////////////////////
-  //    Rendering Loop runner           //
-  //////////////////////////////////////////////////////////////////////////////////
-  var lastTimeMsec= null
-  var delta = 0.0;
-  requestAnimationFrame(function animate(nowMsec){
-    // keep looping
-    requestAnimationFrame( animate );
+  
+  /*
+  * Render loop
+  */ 
+  requestAnimationFrame(function animate() {
 
-    // measure time
-    lastTimeMsec  = lastTimeMsec || nowMsec-1000/60
-    var deltaMsec = Math.min(200, nowMsec - lastTimeMsec)
-    lastTimeMsec  = nowMsec
+    requestAnimationFrame( animate );//keep looping
 
     delta = clock.getDelta();
-
-
 
     // Updating the waveform array with the AudioNode
     sumi = sumf;
     waveform_array = new Float32Array(analyser.frequencyBinCount);
     analyser.getFloatFrequencyData(waveform_array);
     sumf = avg(waveform_array);
-    /* If the difference between the averages of the previous waveform and current 
-    * is large enough, change a scalar to cause a "jump" in the visuals
-    */
-    if (Math.abs(sumf - sumi) >= 23) {
-      wavesMaterial.uniforms['drop'].value = 95.;
-      abyssMaterial.uniforms['drop'].value = 95.;
-    }
-    else if (abyssMaterial.uniforms['drop'].value > 1 || wavesMaterial.uniforms['drop'].value > 1){
-      wavesMaterial.uniforms['drop'].value = 1.+ wavesMaterial.uniforms['drop'].value*.75;
-      abyssMaterial.uniforms['drop'].value = 1.+ abyssMaterial.uniforms['drop'].value*.75;
-    }
+    // Compare the rate of dB change between last and current bin
+    var diff = Math.abs(sumf - sumi)/analyser.smoothingTimeConstant; 
 
-   // wavesMaterial.uniforms['frequency'].value = waveform_array;
-   // abyssMaterial.uniforms['frequency'].value = waveform_array;
+
     heartMaterial.uniforms['frequency'].value = waveform_array;
-  //  console.log(heartMaterial.uniforms['frequency'].value);
-
-
     wavesMaterial.uniforms['time'].value += delta;
     abyssMaterial.uniforms['time'].value += delta;
     heartMaterial.uniforms['time'].value += delta;
+  
+    camera.position.x = 500*Math.sin(clock.getElapsedTime())
+    camera.position.y = 1000*Math.cos(Math.sin(clock.getElapsedTime()))
+    camera.position.z = 500*Math.cos(clock.getElapsedTime())
 
-    // call each update function
-    onRenderFcts.forEach(function(onRenderFct){
-      onRenderFct(deltaMsec/1000, nowMsec/1000)
-    })
+    camera.lookAt( scene.position ); 
+
+    renderer.render( scene, camera ); // render frame
   })
 })

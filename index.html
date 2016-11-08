@@ -153,7 +153,6 @@
 	varying vec2 vUv;
 	varying float d;// displacement
 	uniform float time;
-	uniform float drop; 
 	// FFT frequencies 
 //	uniform float frequency[1000]; 
 	float radius(vec3 p) {
@@ -192,6 +191,7 @@
 	varying float d;// displacement
 	uniform float time;
 	uniform float frequency[512]; 
+	uniform float minDecibels;
 
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x + p.y*p.y);
@@ -199,29 +199,42 @@
 
 	float LinearToDecibel(float linear)
 	{
-	   float db;
-	   if (linear != 0.0)
-	     db = 20.0 * log(linear);
-	   else
-	     db = -144.0;  // effectively minus infinity
-	   return db;
+		return linear-minDecibels;
 	}
 
 	void main() {
 	    vUv = uv;
-	    //float s = frequency[int(abs(radius(position)))];
-	    d = frequency[int(abs(radius(position)))];
-	    /*
-			* Displacement is a function of the FFT frequencies 
-			*	provided by the Web Audio API's AudioNode analyser
-	    */
-	    //frequency[int(abs(radius(position)+time))];
-	    //int i =  frequency[2];
-		   //	uint i = frequency[int(abs(radius(position)))];
-	   	//d =	float(i);
-	   //	d *= d;
+	    d = LinearToDecibel(frequency[int(radius(position))]);
+
 	   	vec3 newposition = position + normal*d;
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
+
+	}
+
+</script>
+
+<script id="heart-fragment" type="x-shader/x-fragment">
+	varying vec2 vUv;
+	varying float d;
+	uniform float drop; 
+	uniform float time;
+
+	void main() {
+			// Making the color a red scale with respect to vertex displacement
+	    gl_FragColor = vec4(1.0*tan(2.*3.14*d/180.+time), vec2(1.0)*sin(2.*3.14*d/180.+time), 1.0);
+
+	}
+</script>
+
+
+<script id="cube-heart-fragment" type="x-shader/x-fragment">
+	varying vec2 vUv;
+	varying float d;// displacement 
+	uniform float time;
+
+	void main() {
+			// Making the color a red scale with respect to vertex displacement
+	    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0 )*sin(time*3.14*2.);
 
 	}
 </script>
