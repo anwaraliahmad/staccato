@@ -25,3 +25,19 @@ h1 {
   color: white;
   font-family: 'Advent Pro', sans-serif;
 }
+
+#drop {
+  display: none;
+}
+
+.drop {
+  display: default;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  font-size: 128px;
+  text-align: center;
+  color: white;
+  background: rgba(0,0,255, 0.7);
+  z-index: 5;
+}

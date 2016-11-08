@@ -9,10 +9,13 @@
 <link href="https://fonts.googleapis.com/css?family=Advent+Pro:100" rel="stylesheet">
 
 <link href="./styles.css" rel="stylesheet"/>
-<body>
+<body >
+
 	<div class="banner">
-		<h1> Anwar Ali-Ahmad</h1>
+		<h1> </h1>
 	</div>
+
+	<script src="./script.js"></script>
 </body>
 
 <script type="application/x-glsl" id="sky-vertex">  
@@ -111,7 +114,8 @@
 	varying vec2 vUv;
 	varying float d;
 	uniform float time;	
-	uniform float frequency[512];
+	//uniform float frequency[1000];
+	uniform float drop;
 
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x + p.x*p.x);
@@ -120,9 +124,13 @@
 	void main() {
 		vUv = uv;
 		float r = radius(position);
-		d = 1.*snoise(vec2(position.xy)) * r/300. + 1.*sin(r*2.*3.14/180.0+time)/5. + frequency[int(abs(position.x))]/10.;
-		float displacement = -d*d;
-		vec3 newposition = position + normal * displacement;
+		float n = snoise(vec2(position.xy));
+
+		d = 4.*snoise(vec2(position.xy)) * r/300.;
+		float disp = - d*d;
+
+
+		vec3 newposition = position + normal * (disp);
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
 	}
 </script>
@@ -136,7 +144,7 @@
 
 	    // compose the colour using the UV coordinate
 	    // and modulate it with the noise like ambient occlusion
-	    gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0 )*abs(1./d);
+	    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0 );
 
 	}
 </script>
@@ -145,8 +153,9 @@
 	varying vec2 vUv;
 	varying float d;// displacement
 	uniform float time;
+	uniform float drop; 
 	// FFT frequencies 
-	uniform float frequency[1000]; 
+//	uniform float frequency[1000]; 
 	float radius(vec3 p) {
 		return sqrt(2.*p.x*p.x + p.y*p.y);
 	}
@@ -157,8 +166,10 @@
 			* Displacement is a function of the FFT frequencies 
 			*	provided by the Web Audio API's AudioNode analyser
 	    */
-	 		d = frequency[int(abs(radius(position)+time))];
-	   	vec3 newposition = position - normal*d;
+	 		//d = frequency[int(abs(radius(position)+time))]*1.0;
+	   	d =	5.*cos(2.*3.14*radius(position)/180.+ time);
+
+	   	vec3 newposition = position - normal*d*d;
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
 
 	}
@@ -171,10 +182,47 @@
 
 	void main() {
 			// Making the color a red scale with respect to vertex displacement
-	    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0 )*sin(abs(d*d*d*d));
+	    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0 );
 
 	}
 </script>
 
+<script id="heart-vertex" type="x-shader/x-vertex">
+	varying vec2 vUv;
+	varying float d;// displacement
+	uniform float time;
+	uniform float frequency[512]; 
 
-<script src="./script.js"></script>
+	float radius(vec3 p) {
+		return sqrt(p.x*p.x + p.y*p.y);
+	}
+
+	float LinearToDecibel(float linear)
+	{
+	   float db;
+	   if (linear != 0.0)
+	     db = 20.0 * log(linear);
+	   else
+	     db = -144.0;  // effectively minus infinity
+	   return db;
+	}
+
+	void main() {
+	    vUv = uv;
+	    //float s = frequency[int(abs(radius(position)))];
+	    d = frequency[int(abs(radius(position)))];
+	    /*
+			* Displacement is a function of the FFT frequencies 
+			*	provided by the Web Audio API's AudioNode analyser
+	    */
+	    //frequency[int(abs(radius(position)+time))];
+	    //int i =  frequency[2];
+		   //	uint i = frequency[int(abs(radius(position)))];
+	   	//d =	float(i);
+	   //	d *= d;
+	   	vec3 newposition = position + normal*d;
+	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
+
+	}
+</script>
+
