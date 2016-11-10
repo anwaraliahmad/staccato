@@ -1,50 +1,120 @@
-require([], function(){
+var scene, renderer, camera, clock, winResize;
+var ambientLight, frontLight, backLight;
+
+var uniforms, geometry, material, skyBox;
+
+var wavesGeo, wavesUniforms, wavesMaterial, waves;
+
+var abyssGeo, abyssUniforms, abyssMaterial, abyss;
+
+var heartMaterial, heartUniforms, heartGeometry, heart;
+
+function Staccato(scene, camera) {
+  this.scene = scene;
+  this.camera = camera; 
+  this.shaderTypes = ['heart', 'wave', 'abyss'];
+  this.shaders = {};
+  this.uniforms = {
+      d: { 
+        type: "f",
+        value: 0.0
+      },
+      t: {
+        type: "f",
+        value: 0.0
+      },
+      fft: {
+        type: "iv1",
+        value: [1.0, 1.0, 1.0]
+      },
+      mDb: {
+        type: "f",
+        value: -100.0
+      }
+  };
+  // Size for AnalysisNode's fft samples 
+  this.FFT = 1024;
+  for (var i = 0; i < this.shaderTypes.length; i++) {
+    this.shaders[this.shaderTypes[i]+"-vertex"] = document.getElementById(this.shaderTypes[i]+"-vertex").textContent;
+    this.shaders[this.shaderTypes[i]+"-fragment"] = document.getElementById(this.shaderTypes[i]+"-fragment").textContent;
+  }  
+  this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  this.sources = [];
+  // Load a new song
+  this.load = function (url) {
+    // Make a get request to song's URL 
+    var r = new XMLHttpRequest();
+    var scope = this;
+    r.open("GET", url, true); 
+    r.responseType = "arraybuffer";
+    var buffer = null;
+    var ctx = this.ctx;
+    r.onload = function() {
+      // Build audio buffer from sound
+      ctx.decodeAudioData(r.response, function(buff) {
+        buffer = buff;
+        scope.play(buffer);
+
+      });
+    }
+    r.send();
+
+  }
+
+
+  this.play = function(buffer) {
+    var s = this.ctx.createBufferSource();
+    s.buffer = buffer;
+    s.connect(this.ctx.destination);
+    s.start(0);
+  }
+
+
+
+}
+
+
+window.onload = function() {
   // detect WebGL
   if( !Detector.webgl ){
     Detector.addGetWebGLMessage();
     throw 'WebGL Not Available'
   } 
-  // setup webgl renderer full page
-  var renderer  = new THREE.WebGLRenderer();
+
+    // setup webgl renderer full page
+  renderer  = new THREE.WebGLRenderer();
   renderer.setSize( window.innerWidth, window.innerHeight );
   document.body.appendChild( renderer.domElement );
   // setup a scene and camera
-  var scene = new THREE.Scene();
-  var camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 10000);
+  scene = new THREE.Scene();
+  camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 10000);
   camera.position.z = 800;
   camera.position.y = 150;
-  var clock = new THREE.Clock();
-  var winResize = new THREEx.WindowResize(renderer, camera);
+  clock = new THREE.Clock();
+  winResize = new THREEx.WindowResize(renderer, camera);
 
-  ///////// Setting up Web Audio Context and Pizzicato.js sound //////////
-  var waveform_array, time_array;
-  var sumf = 0;
-  var sumi = 0;
-  var context = Pizzicato.context;
-  var analyser = context.createAnalyser();
-  var FFT = 512;
-  analyser.fftSize = FFT;
-  var mouse = {x : 0, y : 0};
+
   /* 
   * Using standard 3-point lighting technique
   */ 
   
-  var ambientLight= new THREE.AmbientLight( 0x020202 )
-  scene.add( ambientLight)
-  var frontLight  = new THREE.DirectionalLight('white', 1)
+  ambientLight= new THREE.AmbientLight( 0x020202 )
+  scene.add( ambientLight);
+  frontLight  = new THREE.DirectionalLight('white', 1)
   frontLight.position.set(0.5, 0.5, 2)
-  scene.add( frontLight )
-  var backLight = new THREE.DirectionalLight('white', 0.75)
+  scene.add( frontLight );
+  backLight = new THREE.DirectionalLight('white', 0.75)
   backLight.position.set(-0.5, -0.5, -2)
-  scene.add( backLight )    
+  scene.add( backLight );
 
-  /*********SKYDOME**********/
-  var geometry = new THREE.SphereGeometry(3000, 32, 32);  
-  var uniforms = {  
+
+    /*********SKYDOME**********/
+  geometry = new THREE.SphereGeometry(3000, 32, 32);  
+  uniforms = {  
     texture: { type: 't', value: THREE.ImageUtils.loadTexture('./vendor/img/skydome.jpg') }
   };
 
-  var material = new THREE.ShaderMaterial( {  
+  material = new THREE.ShaderMaterial( {  
     uniforms:       uniforms,
     vertexShader:   document.getElementById('sky-vertex').textContent,
     fragmentShader: document.getElementById('sky-fragment').textContent
@@ -58,24 +128,21 @@ require([], function(){
   scene.add(skyBox); 
 
 
-  var sound = new Pizzicato.Sound('./vendor/audio/Prismatic.mp3', function() {
-  // Linking the sound to the AudioNode analyser
-  sound.connect(analyser);
-  sound.play();
-  
-  });
 
-  waveform_array = new Float32Array(analyser.frequencyBinCount);
+  /*************WAVE GEOMETRY***************
+  * A plane with a "wavy" shader applied to it.
+  * Uses 
+  */
+  wavesGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
 
-  // Waves wireframe
-  var waves_uniforms =    {
+  wavesUniforms =    {
         time: { // float initialized to 0
           type: "f", 
           value: 0.0 
         },
         frequency: { // 32-bit float array of FFT generated frequencies
           type: "iv1",
-          value: waveform_array
+          value: [20., 20.]
         },
         drop: {
           type: "f",
@@ -83,22 +150,17 @@ require([], function(){
         }
   }
 
-  /*************WAVE GEOMETRY***************
-  * A plane with a "wavy" shader applied to it.
-  * Uses 
-  */
-  var wavesGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
-  var wavesMaterial = new THREE.ShaderMaterial( { 
+  wavesMaterial = new THREE.ShaderMaterial( { 
     wireframe: true,
     blending: THREE.NormalBlending,
     side: THREE.DoubleSide, 
-    uniforms: waves_uniforms,
+    uniforms: wavesUniforms,
     vertexShader:   document.getElementById('wave-vertex').textContent,
     fragmentShader: document.getElementById('wave-fragment').textContent
   });
 
 
-  var waves = new THREE.Mesh(wavesGeo, wavesMaterial);
+  waves = new THREE.Mesh(wavesGeo, wavesMaterial);
   waves.rotation.x += Math.PI/2;
   waves.position.y = 200;
   scene.add(waves);
@@ -109,23 +171,15 @@ require([], function(){
   * shader. Uses noise functions for the rockiness.
   */ 
 
-  var abyssGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
+  abyssGeo = new THREE.PlaneGeometry(1500, 1500, 64, 64);
   
-  var abyssUniforms = {
+  abyssUniforms = {
     time: {
       type: "f",
       value: 0.0
-    },
-    frequency: {
-      type: "iv1",
-      value: waveform_array
-    },  
-    drop: {
-      type: "f",
-      value: 1.0
     }
   };
-  var abyssMaterial = new THREE.ShaderMaterial( { 
+  abyssMaterial = new THREE.ShaderMaterial( { 
     wireframe: true,
     blending: THREE.NormalBlending,
     side: THREE.DoubleSide, 
@@ -134,7 +188,7 @@ require([], function(){
     fragmentShader: document.getElementById('wave-fragment').textContent
   });
 
-  var abyss = new THREE.Mesh(abyssGeo, abyssMaterial); 
+  abyss = new THREE.Mesh(abyssGeo, abyssMaterial); 
   abyss.rotation.x += Math.PI/2;
   abyss.position.y += 25;
   scene.add(abyss);
@@ -145,74 +199,64 @@ require([], function(){
   * Uses vertex displacement with respect to the Fourier transform 
   * data of the audio stream.
   */ 
-  var heartGeometry = new THREE.SphereGeometry(250, 128, 128);
-  var arry = []
-  var heartbeat_uniforms =    {
+  heartGeometry = new THREE.SphereGeometry(250, 128, 128);
+  arry = []
+  heartUniforms =    {
     time: { // float initialized to 0
       type: "f", 
       value: 0.0 
     },
     minDecibels: {
       type: "f",
-      value: analyser.minDecibels
+      value: -100.
     },
     frequency: { // byte array of FFT frequencies
       type: "fv1",
-      value: waveform_array
+      value: [20., 20.]
     }
   }
-  var heartMaterial = new THREE.ShaderMaterial({
+  heartMaterial = new THREE.ShaderMaterial({
     wireframe: true,
     transparent: true,
     opacity: 0.5,
-    uniforms: heartbeat_uniforms,
+    uniforms: heartUniforms,
     vertexShader:   document.getElementById('heart-vertex').textContent,
     fragmentShader: document.getElementById('heart-fragment').textContent
   })
 
-  var heart = new THREE.Mesh(heartGeometry, heartMaterial);
+  heart = new THREE.Mesh(heartGeometry, heartMaterial);
   heart.position.y = 350;
   scene.add(heart);
 
+}
 
-  // Calculating average (used to compare between batches of Fourier data)
-  function avg(arr) {
-    var s = 0; 
-    for (var i = 0; i < arr.length; i++) {
-      s += arr[i];
-    }
-    return s/arr.length;
-  }
-  
-  /*
-  * Render loop
-  */ 
-  requestAnimationFrame(function animate() {
+// Calculating average (used to compare between batches of Fourier data)
+function avg(arr) {
+var s = 0; 
+for (var i = 0; i < arr.length; i++) {
+  s += arr[i];
+}
+return s/arr.length;
+}
 
-    requestAnimationFrame( animate );//keep looping
+/*
+* Render loop
+*/ 
+requestAnimationFrame(function animate() {
 
-    delta = clock.getDelta();
+  requestAnimationFrame( animate );//keep looping
 
-    // Updating the waveform array with the AudioNode
-    sumi = sumf;
-    waveform_array = new Float32Array(analyser.frequencyBinCount);
-    analyser.getFloatFrequencyData(waveform_array);
-    sumf = avg(waveform_array);
-    // Compare the rate of dB change between last and current bin
-    var diff = Math.abs(sumf - sumi)/analyser.smoothingTimeConstant; 
+  delta = clock.getDelta();
 
+  wavesMaterial.uniforms['time'].value += delta;
+  abyssMaterial.uniforms['time'].value += delta;
+  heartMaterial.uniforms['time'].value += delta;
 
-    heartMaterial.uniforms['frequency'].value = waveform_array;
-    wavesMaterial.uniforms['time'].value += delta;
-    abyssMaterial.uniforms['time'].value += delta;
-    heartMaterial.uniforms['time'].value += delta;
-  
-    camera.position.x = 500*Math.sin(clock.getElapsedTime())
-    camera.position.y = 1000*Math.cos(Math.sin(clock.getElapsedTime()))
-    camera.position.z = 500*Math.cos(clock.getElapsedTime())
+  camera.position.x = 800*Math.sin(clock.getElapsedTime()/Math.PI);
+  camera.position.y = 750*Math.abs(Math.cos(clock.getElapsedTime()/Math.PI))+50;
+  camera.position.z = 800*Math.cos(clock.getElapsedTime()/Math.PI);
 
-    camera.lookAt( scene.position ); 
+  camera.lookAt( scene.position ); 
 
-    renderer.render( scene, camera ); // render frame
-  })
+  renderer.render( scene, camera ); // render frame
 })

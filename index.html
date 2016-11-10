@@ -1,14 +1,17 @@
 <!DOCTYPE html>
-<script src='vendor/three.js/build/three.js'></script>
-<script src="vendor/audio/Pizzicato.js"></script>
+<head>
+	<title> Staccato </title>
+	<script src='vendor/three.js/build/three.js'></script>
+	<script src="vendor/audio/Pizzicato.js"></script>
 
-<script src="vendor/require.js/require.js"></script>
-<script src="vendor/three.js/examples/js/Detector.js"></script>
-<script src="vendor/threex.windowresize.js"></script>
+	<script src="vendor/require.js/require.js"></script>
+	<script src="vendor/three.js/examples/js/Detector.js"></script>
+	<script src="vendor/threex.windowresize.js"></script>
 
-<link href="https://fonts.googleapis.com/css?family=Advent+Pro:100" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Advent+Pro:100" rel="stylesheet">
 
-<link href="./styles.css" rel="stylesheet"/>
+	<link href="./styles.css" rel="stylesheet"/>
+</head>
 <body >
 
 	<div class="banner">
@@ -153,20 +156,14 @@
 	varying vec2 vUv;
 	varying float d;// displacement
 	uniform float time;
-	// FFT frequencies 
-//	uniform float frequency[1000]; 
+
 	float radius(vec3 p) {
-		return sqrt(2.*p.x*p.x + p.y*p.y);
+		return sqrt(p.x*p.x + p.y*p.y);
 	}
 
 	void main() {
 	    vUv = uv;
-	    /*
-			* Displacement is a function of the FFT frequencies 
-			*	provided by the Web Audio API's AudioNode analyser
-	    */
-	 		//d = frequency[int(abs(radius(position)+time))]*1.0;
-	   	d =	5.*cos(2.*3.14*radius(position)/180.+ time);
+	   	d =	5.*cos(2.*3.14*radius(position)/180.+ time*3.14);
 
 	   	vec3 newposition = position - normal*d*d;
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
@@ -197,6 +194,7 @@
 		return sqrt(p.x*p.x + p.y*p.y);
 	}
 
+	// Adjusting for minimum decibel values given by FFT
 	float LinearToDecibel(float linear)
 	{
 		return linear-minDecibels;
@@ -204,6 +202,10 @@
 
 	void main() {
 	    vUv = uv;
+	    /*
+			* Displacement is a function of the FFT frequencies 
+			*	provided by the Web Audio API's AudioNode analyser
+	    */
 	    d = LinearToDecibel(frequency[int(radius(position))]);
 
 	   	vec3 newposition = position + normal*d;
