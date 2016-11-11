@@ -9,7 +9,9 @@ var abyssGeo, abyssUniforms, abyssMaterial, abyss;
 
 var heartMaterial, heartUniforms, heartGeometry, heart;
 
+
 function Staccato(scene, camera) {
+
   this.scene = scene;
   this.camera = camera; 
   this.shaderTypes = ['heart', 'wave', 'abyss'];
@@ -39,7 +41,10 @@ function Staccato(scene, camera) {
     this.shaders[this.shaderTypes[i]+"-fragment"] = document.getElementById(this.shaderTypes[i]+"-fragment").textContent;
   }  
   this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-  this.sources = [];
+  var ctx = this.ctx;
+  this.source;
+
+  //this.fileHandler.bind(this);
   // Load a new song
   this.load = function (url) {
     // Make a get request to song's URL 
@@ -58,7 +63,6 @@ function Staccato(scene, camera) {
       });
     }
     r.send();
-
   }
 
 
@@ -67,10 +71,52 @@ function Staccato(scene, camera) {
     s.buffer = buffer;
     s.connect(this.ctx.destination);
     s.start(0);
+    this.source = s;
+  }
+
+
+  this.fileDragHover = function (e) {
+    e.stopPropagation();
+    e.preventDefault();
+    //console.log("fileDragHover triggered");
+    //e.target.className = (e.type === 'dragover' ? 'hover' : '');
+  }
+  function initAudio(data) {
+   // if (this.source) source.stop(0);
+    var source = ctx.createBufferSource();
+    if (ctx.decodeAudioData) {
+      ctx.decodeAudioData(data, function(buffer) {
+        var s = ctx.createBufferSource();
+        s.buffer = buffer;
+        s.connect(ctx.destination);
+        s.start(0);
+      }, function (e) {
+        console.error(e);
+      });
+    } else {
+      console.log("Error: could not initialize audio data.");
+    }
+  }
+  this.fileHandler = function (e) {
+    e.stopPropagation();
+    e.preventDefault();
+    var files = e.target.files || e.dataTransfer.files;
+    var reader = new FileReader();
+    reader.onload = function (f) {
+      var dat = f.target.result;
+      initAudio(dat);
+    }
+
+    reader.readAsArrayBuffer(files[0]);
   }
 
 
 
+
+  this.fileDrop = document.getElementById("fileDrop");
+  this.fileDrop.addEventListener('dragover', this.fileDragHover, false);
+  this.fileDrop.addEventListener('drop', this.fileHandler, false);
+  this.fileHandler = this.fileHandler.bind(this);
 }
 
 
@@ -93,7 +139,7 @@ window.onload = function() {
   clock = new THREE.Clock();
   winResize = new THREEx.WindowResize(renderer, camera);
 
-
+  var stacc = new Staccato(scene, camera);
   /* 
   * Using standard 3-point lighting technique
   */ 
@@ -215,6 +261,7 @@ window.onload = function() {
       value: [20., 20.]
     }
   }
+
   heartMaterial = new THREE.ShaderMaterial({
     wireframe: true,
     transparent: true,

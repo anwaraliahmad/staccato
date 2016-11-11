@@ -26,18 +26,22 @@ h1 {
   font-family: 'Advent Pro', sans-serif;
 }
 
-#drop {
-  display: none;
+.footer { 
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 128px;
 }
 
-.drop {
-  display: default;
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  font-size: 128px;
+.footer div {
+  margin: 4px;
+}
+
+#fileDrop {
+  float: left;
+  width: 128px;
+  font-size: 72px;
   text-align: center;
-  color: white;
-  background: rgba(0,0,255, 0.7);
-  z-index: 5;
+  background-color: rgba(169, 169, 169, .6);
+
 }
