@@ -3,45 +3,52 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
+  font-family: 'Exo 2', sans-serif;
 }
 
 body {
   margin: 0px; 
   background-color: #bbbbbb; 
   overflow: hidden;
+  z-index: 49;
 }
 
 .banner {
-  position: absolute;
+  position: fixed;
+  top: 0;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   text-align: center;
 }
 
 h1 {
-  margin-top: 200px;
+  
   color: white;
-  font-family: 'Advent Pro', sans-serif;
 }
 
 .footer { 
   position: fixed;
+  display: table;
   bottom: 0;
+  z-index:  50;
   width: 100%;
   height: 128px;
+  background-color: rgba(64, 64, 64, .8);
 }
 
 .footer div {
-  margin: 4px;
+  margin: auto;
+  padding: auto;
+  display: table-cell;
+  font-size: 72px;
+  text-align: center; 
+  color: white;
 }
 
-#fileDrop {
-  float: left;
-  width: 128px;
-  font-size: 72px;
-  text-align: center;
-  background-color: rgba(169, 169, 169, .6);
+.hover  {
+  color: black !important;
+  background-color: rgba(254, 254, 254, .5);
+}
 
+#play-button {
+  background-color: green;
 }

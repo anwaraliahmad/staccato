@@ -2,26 +2,26 @@
 <head>
 	<title> Staccato </title>
 	<script src='vendor/three.js/build/three.js'></script>
-	<script src="vendor/audio/Pizzicato.js"></script>
 
 	<script src="vendor/require.js/require.js"></script>
 	<script src="vendor/three.js/examples/js/Detector.js"></script>
 	<script src="vendor/threex.windowresize.js"></script>
 
-	<link href="https://fonts.googleapis.com/css?family=Advent+Pro:100" rel="stylesheet">
-
+	<link href="https://fonts.googleapis.com/css?family=Exo+2:100" rel="stylesheet">
 	<link href="./styles.css" rel="stylesheet"/>
 </head>
-<body id="fileDrop">
+<body>
 
 	<div class="banner">
-		<h1> </h1>
+		<h1> Staccato </h1>
 	</div>
 
 	<div class="footer">
-		<div>
-			+
+		<div id="file-drop"> 
+			Drag + Drop 
+			
 		</div>
+
 	</div>
 
 	<script src="./script.js"></script>
@@ -123,8 +123,7 @@
 	varying vec2 vUv;
 	varying float d;
 	uniform float time;	
-	//uniform float frequency[1000];
-	uniform float drop;
+	uniform float od;
 
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x + p.x*p.x);
@@ -136,24 +135,30 @@
 		float n = snoise(vec2(position.xy));
 
 		d = 4.*snoise(vec2(position.xy)) * r/300.;
-		float disp = - d*d;
+		d = - d*d;
 
 
-		vec3 newposition = position + normal * (disp);
+		vec3 newposition = position + normal * d ;
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
 	}
 </script>
 
 <script id="abyss-fragment" type="x-shader/x-fragment">
 	varying vec2 vUv;
-	varying float d; 
 	uniform float time;
+	uniform float od; 
+
+	float radius(vec2 uv) {
+		uv.x -= .5;
+		uv.y -= .5;
+		return sqrt(uv.x*uv.x + uv.y*uv.y);
+	}
 
 	void main() {
 
 	    // compose the colour using the UV coordinate
 	    // and modulate it with the noise like ambient occlusion
-	    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0 );
+	    gl_FragColor = vec4(1.0- 1.0*sin(radius(vUv)*od)*od, 1.0 - od*1.0*cos(radius(vUv)*od), 1.0, 1.0 );
 
 	}
 </script>
@@ -179,12 +184,17 @@
 
 <script id="wave-fragment" type="x-shader/x-fragment">
 	varying vec2 vUv;
-	varying float d;// displacement 
+	varying float d; // displacement 
 	uniform float time;
 
+	float radius(vec2 u) {
+		float x = u.x-.5;
+		float y = u.y-.5;
+		return sqrt(x*x + y*y);
+	}
 	void main() {
 			// Making the color a red scale with respect to vertex displacement
-	    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0 );
+	    gl_FragColor = vec4(1.0, sin(radius(vUv)*2.*3.14 + time) , cos(radius(vUv)), 1.0);
 
 	}
 </script>
@@ -197,7 +207,7 @@
 	uniform float minDecibels;
 
 	float radius(vec3 p) {
-		return sqrt(p.x*p.x + p.y*p.y);
+		return sqrt(p.x*p.x+p.y*p.y);
 	}
 
 	// Adjusting for minimum decibel values given by FFT
@@ -237,7 +247,6 @@
 
 <script id="cube-heart-fragment" type="x-shader/x-fragment">
 	varying vec2 vUv;
-	varying float d;// displacement 
 	uniform float time;
 
 	void main() {
