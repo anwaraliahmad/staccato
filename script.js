@@ -209,10 +209,10 @@ var stacc;
 
 window.onload = function() {
   // detect WebGL
-  if( !Detector.webgl ){
-    Detector.addGetWebGLMessage();
-    throw 'WebGL Not Available'
-  } 
+  //if( !Detector.webgl ){
+  //  Detector.addGetWebGLMessage();
+   // throw 'WebGL Not Available'
+  //} 
 
     // setup webgl renderer full page
   renderer  = new THREE.WebGLRenderer();
@@ -224,7 +224,7 @@ window.onload = function() {
   camera.position.z = 800;
   camera.position.y = 150;
   clock = new THREE.Clock();
-  winResize = new THREEx.WindowResize(renderer, camera);
+//  winResize = new THREEx.WindowResize(renderer, camera);
 
   /* 
   * Using standard 3-point lighting technique
