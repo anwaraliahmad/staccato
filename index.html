@@ -3,23 +3,14 @@
 	<title> Staccato </title>
 	<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.js
 '></script>
-
-
+	<script src="./threex.windowresize.js"> </script>
+	<script src="./Detector.js"> </script>
 	<link href="https://fonts.googleapis.com/css?family=Exo+2:100" rel="stylesheet">
 	<link href="./styles.css" rel="stylesheet"/>
 </head>
-<body>
-
+<body id="file-drop">
 	<div class="banner">
-		<h1> Staccato </h1>
-	</div>
-
-	<div class="footer">
-		<div id="file-drop"> 
-			Drag + Drop 
-			
-		</div>
-
+		<h1> Staccato | Drag + Drop a Song  </h1>
 	</div>
 
 	<script src="./script.js"></script>
@@ -154,9 +145,9 @@
 
 	void main() {
 
-	    // compose the colour using the UV coordinate
-	    // and modulate it with the noise like ambient occlusion
-	    gl_FragColor = vec4(1.0- 1.0*sin(radius(vUv)*od)*od, 1.0 - od*1.0*cos(radius(vUv)*od), 1.0, 1.0 );
+		// compose the colour using the UV coordinate
+		// and modulate it with the noise like ambient occlusion
+	 	gl_FragColor = vec4(1.0- 1.0*sin(radius(vUv)*od)*od, 1.0 - od*1.0*cos(radius(vUv)*od), 1.0, 1.0 );
 
 	}
 </script>
@@ -172,7 +163,7 @@
 
 	void main() {
 	    vUv = uv;
-	   	d =	5.*cos(2.*3.14*radius(position)/180.+ time*3.14);
+	   	d =	5.*cos(2.*3.14*radius(position)/180.+ time);
 
 	   	vec3 newposition = position - normal*d*d;
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
@@ -191,8 +182,8 @@
 		return sqrt(x*x + y*y);
 	}
 	void main() {
-			// Making the color a red scale with respect to vertex displacement
-	    gl_FragColor = vec4(1.0, sin(radius(vUv)*2.*3.14 + time) , cos(radius(vUv)), 1.0);
+		// Making the color a red scale with respect to vertex displacement
+	  gl_FragColor = vec4(1.0, sin(radius(vUv)*2.*3.14 + time) , cos(radius(vUv)), 1.0);
 
 	}
 </script>

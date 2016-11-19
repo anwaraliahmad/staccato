@@ -1,2 +1,2 @@
-# staccato
+# Staccato
 WebGL music visualizer

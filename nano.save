@@ -1,0 +1,6 @@
+.data 
+
+.code 
+
+	mov edx, :0Fh 
+ 	call WriteString 
