@@ -18,10 +18,16 @@ The two most important uniforms currently used include `time` and `frequency`, w
 
 `Staccato` exists as an easily modifiable object, which handles setting up the audio stream, loading songs, shaders, and adding shapes to the scene. 
 
+### 
 Some attributes/methods to modify:
+
 1. `shaders` : list of shaders that Staccato will load when you call `addShape`, make sure to have elements in `index.html` for your vertex (`[shaderName]-vertex`) and fragment (`[shaderName]-fragment`)shader.
+
 2. `uniforms` : object literal containing all uniform variables that each added shape receives
+
 3. `addShape()` : this is the function which adds a mesh to the scene with a specified `geometry`, `shader`, and vector `position`
+
 4. `update()` : should be called every frame to update uniforms, objects, etc
+
 4. There are several functions for setting up the audio which can be modified and used in plenty of other ways 
 
