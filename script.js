@@ -1,7 +1,6 @@
 // Staccato - WebGL music visualizer using shaders and FFT audio data
 // Copyright (c) Anwar Ali-Ahmad 2016 All rights reserved.
-// This code is released under the conditions of the MIT license.
-// See LICENSE file for details.
+// License: MIT License
 // github.com/anwaraliahmad/staccato
 
 
@@ -157,6 +156,7 @@ function Staccato(scene, camera) {
     mouse.y = (e.clientY / window.innerHeight) - .5;
   });
 
+  // Add a shape with Staccato's shaders to the scene
   this.addShape = function(params) {
     var g; 
     var shape = params.shape;
@@ -187,7 +187,7 @@ function Staccato(scene, camera) {
   }.bind(this);
 
 
-
+  // Update scene
   this.update = function(delta) {
 
 
