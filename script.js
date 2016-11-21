@@ -147,33 +147,25 @@ function Staccato(scene, camera) {
 
 
 
-  var mousedown = false;
   // Adding drag + drop event listeners
   this.fileDrop = document.getElementById("file-drop");
   this.fileDrop.addEventListener('dragover', this.fileDragHover, false);
   this.fileDrop.addEventListener('drop', this.fileHandler, false);
   document.addEventListener("mousemove", function(e) {
     e.preventDefault();
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-  });
-  document.addEventListener("mousedown", function(e) {
-    e.preventDefault();
-    mousedown = true;
-
+    mouse.x = (e.clientX / window.innerWidth ) - .5;
+    mouse.y = (e.clientY / window.innerHeight) - .5;
   });
 
-  document.addEventListener("mouseup", function(e) {
-    e.preventDefault();
-    mousedown = false;
-
-  });
-
-  this.addShape = function(shape, shader, pos) {
+  this.addShape = function(params) {
     var g; 
+    var shape = params.shape;
+    var shader = params.shader; 
+    var pos = params.position;
+    var size = params.size;
     switch(shape) {
-      case "plane": g = new THREE.PlaneGeometry(1500,1500,32,32); break;
-      case "sphere": g = new THREE.SphereGeometry(250, 128, 128); break;
+      case "plane": g = new THREE.PlaneGeometry(size,size,32,32); break;
+      case "sphere": g = new THREE.SphereGeometry(size, 128, 128); break;
     }
     var hm = new THREE.ShaderMaterial({
       wireframe: true,
@@ -197,8 +189,7 @@ function Staccato(scene, camera) {
 
 
   this.update = function(delta) {
-    var spdy =  (window.innerHeight/ 2 - mouse.y);
-    var spdx =  (window.innerWidth / 2 - mouse.x);
+
 
     // Update FFT audio data
     this.waveData = new Float32Array(analyser.frequencyBinCount);
@@ -212,15 +203,8 @@ function Staccato(scene, camera) {
       objectMat[i].uniforms['od'].value = avg;
       objectMat[i].uniforms['time'].value += delta;
     }
-
-    // Have camera glide about the center in a cylindrical path
-  //  camera.position.x = 800*Math.sin(clock.getElapsedTime()/PI2);
-   // camera.position.y = 750*(Math.cos(clock.getElapsedTime()/PI2));
-    //camera.position.z = 800*Math.cos(clock.getElapsedTime()/PI2);
-    if (mousedown) {
-      camera.position.x += (spdx*5- camera.position.x)*delta;
-      camera.position.y += (spdy*5- camera.position.y)*delta;
-    }
+    camera.position.x += (mouse.x*2000- camera.position.x) * (delta*3)
+    camera.position.y += (mouse.y*2000 - camera.position.y) * (delta*3)
     camera.lookAt( scene.position ); 
   }
 }
@@ -266,9 +250,11 @@ window.onload = function() {
   
  
   stacc = new Staccato(scene, camera);
-  stacc.addShape("sphere",'heart', new THREE.Vector3(0,0,0));
-  stacc.addShape("plane",'abyss', new THREE.Vector3(0, -300, 0));
-  stacc.addShape("plane",'wave', new THREE.Vector3(0, 300, 0));
+    
+  stacc.addShape({shape: "sphere", shader: "heart", position: new THREE.Vector3(0,0,0), size: 300});
+  stacc.addShape({shape: "plane", shader: "wave", position: new THREE.Vector3(0,1200,0), size: 3000});
+  stacc.addShape({shape: "plane", shader: "abyss", position: new THREE.Vector3(0,-1200,0), size: 3000});
+
 
   /*
   * Render loop

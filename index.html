@@ -112,11 +112,21 @@
 	varying vec2 vUv;
 	varying float d;
 	uniform float time;	
-	uniform float od;
+	uniform float frequency[512];
+	uniform float mDb;
 
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x + p.x*p.x);
 	}
+
+	// Adjusting for minimum decibel values given by FFT
+	float LinearToDecibel(float linear)
+	{
+		return linear-mDb;
+	}
+
+
+
 
 	void main() {
 		vUv = uv;
@@ -125,7 +135,7 @@
 
 		d = 4.*snoise(vec2(position.xy)) * r/300.;
 		d = - d*d;
-
+		d += LinearToDecibel(frequency[int(radius(position))]);
 
 		vec3 newposition = position + normal * d ;
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
@@ -175,6 +185,14 @@
 	varying vec2 vUv;
 	varying float d; // displacement 
 	uniform float time;
+	uniform float frequency[512];
+	uniform float mDb;
+
+	// Adjusting for minimum decibel values given by FFT
+	float LinearToDecibel(float linear)
+	{
+		return linear-mDb;
+	}
 
 	float radius(vec2 u) {
 		float x = u.x-.5;
@@ -192,7 +210,7 @@
 	varying vec2 vUv;
 	varying float d;// displacement
 	uniform float time;
-	uniform float frequency[512]; 
+	uniform float frequency[512]; // FFT decibel data 
 	uniform float minDecibels;
 
 	float radius(vec3 p) {
@@ -213,7 +231,7 @@
 	    */
 	    d = LinearToDecibel(frequency[int(radius(position))]);
 
-	   	vec3 newposition = position + normal*d;
+	   	vec3 newposition = position + normal*d*d/15.;
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
 
 	}
