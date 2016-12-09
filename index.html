@@ -3,6 +3,7 @@
 	<title> Staccato </title>
 	<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.js
 '></script>
+	 <script id="yt-iframe" src="https://www.youtube.com/iframe_api"> </script>
 	<script src="./threex.windowresize.js"> </script>
 	<script src="./Detector.js"> </script>
 	<link href="https://fonts.googleapis.com/css?family=Exo+2:100" rel="stylesheet">
@@ -12,7 +13,15 @@
 	<div class="banner">
 		<h1> Staccato | Drag + Drop a Song  </h1>
 	</div>
+	<div class="footer">
+		<div id="yt-input">
+			Whaddup
+		</div>
+		<div id="player" class="video"> </div>
 
+	</div>
+
+ 
 	<script src="./script.js"></script>
 </body>
 
@@ -109,12 +118,17 @@
 	  return 130.0 * dot(m, g);
 	}
 
+	// Music visualizer vertex-displacement shader 
+	// Anwar Ali-Ahmad
+	// Copyright (c) 2016 Anwar Ali-Ahmad. All rights reserved.
+
 	varying vec2 vUv;
 	varying float d;
 	uniform float time;	
 	uniform float frequency[512];
 	uniform float mDb;
 
+	// Length from center at position
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x + p.x*p.x);
 	}
@@ -125,9 +139,6 @@
 		return linear-mDb;
 	}
 
-
-
-
 	void main() {
 		vUv = uv;
 		float r = radius(position);
@@ -136,7 +147,7 @@
 		d = 4.*snoise(vec2(position.xy)) * r/300.;
 		d = - d*d;
 		d += LinearToDecibel(frequency[int(radius(position))]);
-
+		d += d/15.;
 		vec3 newposition = position + normal * d ;
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
 	}
@@ -147,6 +158,7 @@
 	uniform float time;
 	uniform float od; 
 
+	// Adjusting UV vector to account for origin of coordinate system
 	float radius(vec2 uv) {
 		uv.x -= .5;
 		uv.y -= .5;
@@ -173,9 +185,9 @@
 
 	void main() {
 	    vUv = uv;
-	   	d =	5.*cos(2.*3.14*radius(position)/180.+ time);
+	   	d =	50.*cos(2.*3.14*radius(position)/180.+time);
 
-	   	vec3 newposition = position - normal*d*d;
+	   	vec3 newposition = position - normal*d;
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
 
 	}
@@ -188,7 +200,6 @@
 	uniform float frequency[512];
 	uniform float mDb;
 
-	// Adjusting for minimum decibel values given by FFT
 	float LinearToDecibel(float linear)
 	{
 		return linear-mDb;
@@ -199,25 +210,33 @@
 		float y = u.y-.5;
 		return sqrt(x*x + y*y);
 	}
-	void main() {
+
+	// To work around GLSL compiler sometimes not accessing arrays properly
+	float getData(int id) {
+    for (int i=0; i< 512; i++) {
+        if (i == id) return frequency[i];
+    }
+	}
+	void main() {;
 		// Making the color a red scale with respect to vertex displacement
-	  gl_FragColor = vec4(1.0, sin(radius(vUv)*2.*3.14 + time) , cos(radius(vUv)), 1.0);
+	  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 
 	}
 </script>
 
 <script id="heart-vertex" type="x-shader/x-vertex">
 	varying vec2 vUv;
-	varying float d;// displacement
+	varying float disp;// displacement
 	uniform float time;
 	uniform float frequency[512]; // FFT decibel data 
 	uniform float minDecibels;
 
+	// How far is coordinate from origin 
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x+p.y*p.y);
 	}
 
-	// Adjusting for minimum decibel values given by FFT
+	// Adjusting for minimum decibel values given by WebAudio API's FFT
 	float LinearToDecibel(float linear)
 	{
 		return linear-minDecibels;
@@ -225,13 +244,12 @@
 
 	void main() {
 	    vUv = uv;
-	    /*
-			* Displacement is a function of the FFT frequencies 
-			*	provided by the Web Audio API's AudioNode analyser
-	    */
-	    d = LinearToDecibel(frequency[int(radius(position))]);
+	    
+			// Displacement is a function of the FFT frequencies 
+			// provided by the Web Audio API's AudioNode analyser
+	    disp = LinearToDecibel(frequency[int(radius(position))]);
 
-	   	vec3 newposition = position + normal*d*d/15.;
+	   	vec3 newposition = position + normal*disp*disp/15.;
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
 
 	}
@@ -240,13 +258,12 @@
 
 <script id="heart-fragment" type="x-shader/x-fragment">
 	varying vec2 vUv;
-	varying float d;
+	varying float disp;
 	uniform float drop; 
 	uniform float time;
 
 	void main() {
-			// Making the color a red scale with respect to vertex displacement
-	    gl_FragColor = vec4(1.0*tan(2.*3.14*d/180.+time), vec2(1.0)*sin(2.*3.14*d/180.+time), 1.0);
+	    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 
 	}
 </script>
@@ -257,7 +274,6 @@
 	uniform float time;
 
 	void main() {
-			// Making the color a red scale with respect to vertex displacement
 	    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0 )*sin(time*3.14*2.);
 
 	}

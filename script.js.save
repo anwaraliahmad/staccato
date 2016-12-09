@@ -11,8 +11,9 @@ var uniforms, geometry, material, skyBox;
 var winResize;
 
 // STACCATO OBJECT 
+
 function Staccato(scene, camera) {
-  var objectMat, PI2;
+  var ctx, analyser, objectMat, PI2;
   PI2 = Math.PI*2;
   this.scene = scene;
   this.camera = camera; 
@@ -47,13 +48,15 @@ function Staccato(scene, camera) {
   }  
   // Defining audio context
   this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  var ctx = this.ctx;
   // Analyser to retrive FFT data from audio stream
   this.analyser = this.ctx.createAnalyser();
   this.analyser.fftSize = 1024;
+  var analyser = this.analyser;
   this.source;
   this.waveData = new Float32Array(this.FFT/2);
   var mouse = {x: 0, y:0};
-  this.objectMat = [];
+  var objectMat = [];
 
   // Load a song from url path
   this.load = function (url) {
@@ -63,9 +66,10 @@ function Staccato(scene, camera) {
     r.open("GET", url, true); 
     r.responseType = "arraybuffer";
     var buffer = null;
+    var ctx = this.ctx;
     r.onload = function() {
       // Build audio buffer from sound
-      this.ctx.decodeAudioData(r.response, function(buff) {
+      ctx.decodeAudioData(r.response, function(buff) {
         scope.play(buff);
 
       }.bind(this));
@@ -106,7 +110,7 @@ function Staccato(scene, camera) {
   this.initAudio = function(data) {
     var scope = this;
     if (this.ctx.decodeAudioData) {
-      this.ctx.decodeAudioData(data, function(buffer) {
+      this.ctx	.decodeAudioData(data, function(buffer) {
         scope.play(buffer);
       }, function (e) {
         console.error(e);
@@ -150,9 +154,9 @@ function Staccato(scene, camera) {
     var shader = params.shader; 
     var pos = params.position;
     var size = params.size;
-    switch(shape) { 
+    switch(shape) {
       case "plane": g = new THREE.PlaneGeometry(size,size,32,32); break;
-      case "sphere": g = new THREE.SphereGeometry(size,32,32); break;
+      case "sphere": g = new THREE.SphereGeometry(size, 128, 128); break;
     }
     var hm = new THREE.ShaderMaterial({
       wireframe: true,
@@ -162,13 +166,14 @@ function Staccato(scene, camera) {
       vertexShader:   document.getElementById(shader + '-vertex').textContent,
       fragmentShader: document.getElementById(shader + '-fragment').textContent
     });
-	
-    var m = new THREE.Mesh(g, hm); // Building mesh 
-    m.name = shader + "-" + shape; // Giving ID to Object 
+
+
+    var m = new THREE.Mesh(g, hm);
+    m.name = shader + "-" + shape;
     m.position.set(pos.x, pos.y, pos.z);
     if (shape == "plane")  
       m.rotation.x += Math.PI/2;
-    this.objectMat.push(hm);
+    objectMat.push(hm);
     scene.add(m);
   }.bind(this);
 
@@ -182,9 +187,9 @@ function Staccato(scene, camera) {
     
     var avg = this.avg(this.waveData);
     // Update the uniforms for each object
-    for (var i = 0; i < this.objectMat.length; i++) {
-      this.objectMat[i].uniforms['frequency'].value = this.waveData; 
-      this.objectMat[i].uniforms['time'].value += delta;
+    for (var i = 0; i < objectMat.length; i++) {
+      objectMat[i].uniforms['frequency'].value = this.waveData; 
+      objectMat[i].uniforms['time'].value += delta;
     }
 
     camera.position.x += (mouse.x*4000- camera.position.x) * (delta*3)
@@ -195,46 +200,8 @@ function Staccato(scene, camera) {
 
 var stacc;
 
-// 3. This function creates an <iframe> (and YouTube player)
-//    after the API code downloads.
-var player;
-function onYouTubeIframeAPIReady() {
-
-  player = new YT.Player('player', {
-    width: '400px',
-    height: '200px',
-    videoId: '8x4GC0-Z0ZI',
-    events: {
-      'onReady': onPlayerReady,
-      'onStateChange': onPlayerStateChange
-    }
-  });
-  console.log(player);
-}
-
-// 4. The API will call this function when the video player is ready.
-function onPlayerReady(event) {
-  event.target.playVideo();
-}
-
-// 5. The API calls this function when the player's state changes.
-//    The function indicates that when playing a video (state=1),
-//    the player should play for six seconds and then stop.
-var done = false;
-function onPlayerStateChange(event) {
-  if (event.data == YT.PlayerState.PLAYING && !done) {
-    document.getElementById('yt-input').innerText = player.getVideoData().title;
-    done = true;
-  }
-}
-function stopVideo() {
-  player.stopVideo();
-}
-
-
 // INITIALIZATION (happens once the window loads) 
 window.onload = function() {
-
   if( !Detector.webgl ){
     Detector.addGetWebGLMessage();
     throw 'WebGL Not Available'
@@ -276,20 +243,7 @@ window.onload = function() {
  
   // Initializing a Staccato-powered scene
   stacc = new Staccato(scene, camera);
-
-  
-  function updatePage(e) {
-      CurY = (window.Event) ? e.pageY : event.clientY + (document.documentElement.scrollTop ? document.documentElement.scrollTop : document.body.scrollTop);
-
-      gainNode.gain.value = CurY/HEIGHT;
-  }
-
-
-// connect the AudioBufferSourceNode to the gainNode
-// and the gainNode to the destination, so we can play the
-// music and adjust the volume using the mouse cursor
-source.connect(gainNode);
-gainNode.connect(audioCtx.destination);
+    
   stacc.addShape({shape: "sphere", shader: "heart", position: new THREE.Vector3(0,0,0), size: 300});
   stacc.addShape({shape: "plane", shader: "wave", position: new THREE.Vector3(0,1200,0), size: 3000});
   stacc.addShape({shape: "plane", shader: "abyss", position: new THREE.Vector3(0,-1200,0), size: 3000});
