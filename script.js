@@ -46,6 +46,7 @@ function Staccato(scene, camera) {
     this.shaders[this.shaderTypes[i]+"-fragment"] = document.getElementById(this.shaderTypes[i]+"-fragment").textContent;
     var node = document.createElement("div");
     node.innerHTML = this.shaderTypes[i];
+    node.id = this.shaderTypes[i];
     document.getElementById('side-bar').appendChild(node);
   }  
   // Defining audio context
@@ -57,7 +58,7 @@ function Staccato(scene, camera) {
   this.waveData = new Float32Array(this.FFT/2);
   var mouse = {x: 0, y:0};
   this.objectMat = [];
-
+  this.shapes = [];
   // Load a song from url path
   this.load = function (url) {
     // Make a get request to song's URL 
@@ -75,6 +76,25 @@ function Staccato(scene, camera) {
     }.bind(this);
     r.send();
   }.bind(this); 
+
+
+  // change shader of shape(s) 
+  this.changeShader = function(e)  {
+    var shader = e.target.id;
+    for (var i = 0; i < this.shapes.length; i++) {
+      this.scene.remove(this.shapes[i]);
+      this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
+        wireframe: true,
+        transparent: true,
+        opacity: 0.5,
+        uniforms: this.uniforms,
+        vertexShader:   document.getElementById(shader + '-vertex').textContent,
+        fragmentShader: document.getElementById(shader + '-fragment').textContent
+      }));
+      this.scene.add(this.shapes[i]);
+      console.log(shader);
+    }
+  }.bind(this);
 
 
   // Play the sound buffer
@@ -128,7 +148,6 @@ function Staccato(scene, camera) {
     e.stopPropagation();
     e.preventDefault();
     e.target.className = "";
-    console.log(e);
     var files = e.target.files || e.dataTransfer.files;
     var reader = new FileReader();
     reader.onload = function (f) {
@@ -145,6 +164,17 @@ function Staccato(scene, camera) {
   this.fileDrop = document.getElementById("file-drop");
   this.fileDrop.addEventListener('dragover', this.fileDragHover, false);
   this.fileDrop.addEventListener('drop', this.fileHandler, false);
+
+
+
+
+
+  var shades = document.getElementById('side-bar').childNodes;
+  for (var i = 1; i < shades.length; i++) {
+    shades[i].addEventListener('mouseover', this.changeShader, false);
+  }
+
+
   document.addEventListener("mousemove", function(e) {
     e.preventDefault();
     mouse.x = (e.clientX / window.innerWidth ) - .5;
@@ -177,7 +207,10 @@ function Staccato(scene, camera) {
     if (shape == "plane")  
       m.rotation.x += Math.PI/2;
     this.objectMat.push(hm);
+    this.shapes.push(m);
     scene.add(m);
+
+
   }.bind(this);
 
 
@@ -217,7 +250,6 @@ function onYouTubeIframeAPIReady() {
       'onStateChange': onPlayerStateChange
     }
   });
-  console.log(player);
 }
 
 // 4. The API will call this function when the video player is ready.
@@ -282,12 +314,13 @@ window.onload = function() {
   scene.add( backLight );
   
  
+
+
   // Initializing a Staccato-powered scene
   stacc = new Staccato(scene, camera);
 
   stacc.addShape({shape: "sphere", shader: "heart", position: new THREE.Vector3(0,0,0), size: 300});
-  stacc.addShape({shape: "plane", shader: "wave", position: new THREE.Vector3(0,1200,0), size: 3000});
-  stacc.addShape({shape: "plane", shader: "abyss", position: new THREE.Vector3(0,-1200,0), size: 3000});
+
 
 
   // Render loop 
