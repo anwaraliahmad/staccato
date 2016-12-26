@@ -44,6 +44,9 @@ function Staccato(scene, camera) {
   for (var i = 0; i < this.shaderTypes.length; i++) {
     this.shaders[this.shaderTypes[i]+"-vertex"] = document.getElementById(this.shaderTypes[i]+"-vertex").textContent;
     this.shaders[this.shaderTypes[i]+"-fragment"] = document.getElementById(this.shaderTypes[i]+"-fragment").textContent;
+    var node = document.createElement("div");
+    node.innerHTML = this.shaderTypes[i];
+    document.getElementById('side-bar').appendChild(node);
   }  
   // Defining audio context
   this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -67,7 +70,7 @@ function Staccato(scene, camera) {
       // Build audio buffer from sound
       this.ctx.decodeAudioData(r.response, function(buff) {
         scope.play(buff);
-
+        scope.sound = buff;
       }.bind(this));
     }.bind(this);
     r.send();
@@ -77,6 +80,8 @@ function Staccato(scene, camera) {
   // Play the sound buffer
   this.play = function(buffer) {
     this.analyser = this.ctx.createAnalyser();
+    if (this.source)
+        this.source.stop();
     this.source = this.ctx.createBufferSource();
     this.source.buffer = buffer;
     this.source.connect(this.analyser);
@@ -97,6 +102,7 @@ function Staccato(scene, camera) {
 
   // When file is dragged over file drop element
   this.fileDragHover = function (e) {
+    e.preventDefault();
     e.stopPropagation();
     e.preventDefault();
     e.target.className = (e.type === 'dragover' ? 'hover' : '');
@@ -118,9 +124,11 @@ function Staccato(scene, camera) {
 
   // Retrieve data from dropped file to be decoded
   this.fileHandler = function (e) {
+    e.preventDefault();
     e.stopPropagation();
     e.preventDefault();
     e.target.className = "";
+    console.log(e);
     var files = e.target.files || e.dataTransfer.files;
     var reader = new FileReader();
     reader.onload = function (f) {
@@ -179,7 +187,7 @@ function Staccato(scene, camera) {
     // Update FFT audio data
     this.waveData = new Float32Array(this.analyser.frequencyBinCount);
     this.analyser.getFloatFrequencyData(this.waveData);
-    
+    this.waveData = (this.source) ? this.waveData : [0.0, 0.0, 0.0];
     var avg = this.avg(this.waveData);
     // Update the uniforms for each object
     for (var i = 0; i < this.objectMat.length; i++) {
@@ -277,19 +285,6 @@ window.onload = function() {
   // Initializing a Staccato-powered scene
   stacc = new Staccato(scene, camera);
 
-  
-  function updatePage(e) {
-      CurY = (window.Event) ? e.pageY : event.clientY + (document.documentElement.scrollTop ? document.documentElement.scrollTop : document.body.scrollTop);
-
-      gainNode.gain.value = CurY/HEIGHT;
-  }
-
-
-// connect the AudioBufferSourceNode to the gainNode
-// and the gainNode to the destination, so we can play the
-// music and adjust the volume using the mouse cursor
-source.connect(gainNode);
-gainNode.connect(audioCtx.destination);
   stacc.addShape({shape: "sphere", shader: "heart", position: new THREE.Vector3(0,0,0), size: 300});
   stacc.addShape({shape: "plane", shader: "wave", position: new THREE.Vector3(0,1200,0), size: 3000});
   stacc.addShape({shape: "plane", shader: "abyss", position: new THREE.Vector3(0,-1200,0), size: 3000});

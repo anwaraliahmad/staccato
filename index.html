@@ -3,22 +3,23 @@
 	<title> Staccato </title>
 	<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.js
 '></script>
-	 <script id="yt-iframe" src="https://www.youtube.com/iframe_api"> </script>
 	<script src="./threex.windowresize.js"> </script>
 	<script src="./Detector.js"> </script>
 	<link href="https://fonts.googleapis.com/css?family=Exo+2:100" rel="stylesheet">
 	<link href="./styles.css" rel="stylesheet"/>
 </head>
-<body id="file-drop">
+<body  id="file-drop">
 	<div class="banner">
-		<h1> Staccato | Drag + Drop a Song  </h1>
-	</div>
-	<div class="footer">
-		<div id="yt-input">
-			Whaddup
-		</div>
-		<div id="player" class="video"> </div>
+		<h1> // Staccato | Drag + Drop a Song  </h1>
+		<h3 id="console"> 
 
+		</h3>
+	</div>
+	<div id="side-bar">
+
+	</div>
+	<div  id="file-drop" class="footer">
+		STREAMING HERE 
 	</div>
 
  
@@ -180,12 +181,12 @@
 	uniform float time;
 
 	float radius(vec3 p) {
-		return sqrt(p.x*p.x + p.y*p.y);
+		return sqrt(p.x*p.x + p.x*p.x);
 	}
 
 	void main() {
 	    vUv = uv;
-	   	d =	50.*cos(2.*3.14*radius(position)/180.+time);
+	   	d =	50.*cos(2.*3.14*radius(position)/180.+5.*time);
 
 	   	vec3 newposition = position - normal*d;
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
@@ -263,7 +264,7 @@
 	uniform float time;
 
 	void main() {
-	    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+	    gl_FragColor = vec4(1.0, 1.0*sin(time), 1.0, 1.0);
 
 	}
 </script>

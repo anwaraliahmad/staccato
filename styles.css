@@ -21,7 +21,7 @@ body {
 }
 
 h1 {
-  
+  float: left;
   color: white;
 }
 
@@ -45,7 +45,26 @@ h1 {
 
 }
 
+#side-bar {
+  position: fixed;
+  float:right;
+  width: 30%;
+  height: 100%;
+  right: 0;
+}
 
+#side-bar div {
+  padding: 10px;
+  padding-top: 50px;
+  margin: 10px;
+  background-color: rgba(128, 128, 128, .6);
+  color: white;
+}
+
+#side-bar div:hover {
+  background-color: white;
+  color: black;
+}
 
 .hover  {
   color: black !important;
