@@ -206,12 +206,76 @@ function Staccato(scene, camera) {
     m.position.set(pos.x, pos.y, pos.z);
     if (shape == "plane")  
       m.rotation.x += Math.PI/2;
-    this.objectMat.push(hm);
     this.shapes.push(m);
     scene.add(m);
 
 
   }.bind(this);
+
+  // procedurally generate a shader 
+
+  this.genShader = function() {
+    var shader = "varying vec2 vUv;\n";
+    shader += "uniform float time;\n"
+              + "uniform float frequency[512];\n";
+
+    shader += "float radius() {\n"
+              + "return sqrt(position.x*position.x + position.y*position.y);\n"
+              + "}\n";
+
+    shader += "int main() { \n"
+          + "vUv = uv; \n";
+
+    var disp = "(";
+    function _dFunct(f) {
+      var i = Math.random()*5 + 1;
+      if (n == 0) return "radius()+180.*time/3.14159"; 
+      for (i = 0; i < n; i++) {
+        var ff = Math.floor(Math.random()*3); 
+        var t;
+        switch (ff) {
+            case 0: t = "sin";
+                break;
+            case 1: t = "cos";
+                break;
+            case 2: t = "log";
+                break;
+        }
+        disp += t+"("+_dFunct(t)+")";
+      }
+
+      var nn = Math.floor(Math.random()*5)+1;
+      for (i = 0; i < n; i++) {
+        var ff = Math.floor(Math.random()*3); 
+        var t;
+        switch (ff) {
+            case 0: t = "sin";
+                break;
+            case 1: t = "cos";
+                break;
+            case 2: t = "log";
+                break;
+        }
+        disp += t+"("+_dFunct(t)+")";
+      }        
+      disp += ")"
+      shader += "gl_Position =  projectionMatrix * modelViewMatrix * vec4(position + normal*"+disp+", 1.0 );\n";
+      shader += "}";
+    }
+    return shader;
+  }
+
+  this.addShader = function() {
+    var s = this.genShader();
+    var sn = "//ID"+Math.floor(Math.random()*1254)+"//";
+    this.shaderTypes.push(sn);
+    this.shaders[sn+"-vertex"] = s;
+    this.shaders[sn+"-fragment"] = document.getElementById('wave-fragment');
+    var node = document.createElement("div");
+    node.innerHTML = sn;
+    node.id = sn;
+    document.getElementById('side-bar').appendChild(node);     
+  }
 
 
   // Update scene
@@ -223,15 +287,16 @@ function Staccato(scene, camera) {
     this.waveData = (this.source) ? this.waveData : [0.0, 0.0, 0.0];
     var avg = this.avg(this.waveData);
     // Update the uniforms for each object
-    for (var i = 0; i < this.objectMat.length; i++) {
-      this.objectMat[i].uniforms['frequency'].value = this.waveData; 
-      this.objectMat[i].uniforms['time'].value += delta;
+    for (var i = 0; i < this.shapes.length; i++) {
+      this.shapes[i].material.uniforms['frequency'].value = this.waveData; 
+      this.shapes[i].material.uniforms['time'].value += delta;
     }
 
     camera.position.x += (mouse.x*4000- camera.position.x) * (delta*3)
     camera.position.y += (mouse.y*4000 - camera.position.y) * (delta*3)
     camera.lookAt( scene.position ); 
   }
+
 }
 
 var stacc;
