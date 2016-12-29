@@ -45,6 +45,13 @@ function Staccato(scene, camera) {
     node.id = this.shaderTypes[i];
     document.getElementById('side-bar').appendChild(node);
   }  
+
+  var node = document.createElement("div");
+  node.innerHTML = "+";
+  node.id = "add-shader";
+  document.getElementById('side-bar').appendChild(node);  
+  node.addEventListener('onclick', this.addShader, false);
+
   // Defining audio context
   this.ctx = new (window.AudioContext || window.webkitAudioContext)();
   // Analyser to retrive FFT data from audio stream
@@ -167,6 +174,7 @@ function Staccato(scene, camera) {
 
   var shades = document.getElementById('side-bar').childNodes;
   for (var i = 1; i < shades.length; i++) {
+    if (shades[i].id == 'add-shader') continue;
     shades[i].addEventListener('mouseover', this.changeShader, false);
   }
 
@@ -193,7 +201,8 @@ function Staccato(scene, camera) {
       transparent: true,
       opacity: 0.5,
       uniforms: this.uniforms,
-      vertexShader:   document.getElementById(shader + '-vertex').textContent,
+      vertexShader:   this.genShader(),
+      //vertexShader:   document.getElementById(shader + '-vertex').textContent,
       fragmentShader: document.getElementById(shader + '-fragment').textContent
     });
 	
@@ -209,7 +218,6 @@ function Staccato(scene, camera) {
   }.bind(this);
 
   // procedurally generate a shader 
-
   this.genShader = function() {
     var shader = "varying vec2 vUv;\n";
     shader += "uniform float time;\n"
@@ -218,47 +226,55 @@ function Staccato(scene, camera) {
     shader += "float radius() {\n"
               + "return sqrt(position.x*position.x + position.y*position.y);\n"
               + "}\n";
-
-    shader += "int main() { \n"
+    shader += "float getFreqData(float n) {\n" +
+              " return frequency[int(n)];\n" + 
+              "}\n";
+    shader += "void main() { \n"
           + "vUv = uv; \n";
 
-    var disp = "(";
-    function _dFunct(f) {
-      var n = Math.floor(Math.random()*1) + 1;
-      if (n == 1) return "radius()+180.*time/3.14159"; 
-      for (i = 0; i < n; i++) {
-        var ff = Math.floor(Math.random()*3); 
+    var disp = "("
+    function _dFunct(n) {
+
+      if (n <= 0) return "radius()*time/180."; 
+      n--;
+      for (i = 0; i < n+1; i++) {
+        var ff = Math.floor(Math.random()*4); 
         var t;
         switch (ff) {
-            case 0: t = "sin";
+            case 0: t = "getFreqData";
                 break;
             case 1: t = "cos";
                 break;
             case 2: t = "log";
                 break;
+            case 3: t = "sin";
+                break;
         }
-        disp += (Math.random()*50)+"*"+t+"("+_dFunct(t)+")";
+
+        return ""+(Math.random()*12.0*(1./(n+1.)))+"*"+t+"("+_dFunct(n)+")";
+
       }
+
     }
-    var nn = Math.floor(Math.random()*0)+1;
-    for (i = 0; i < nn; i++) {
-      var ff = Math.floor(Math.random()*3); 
-      var t;
-      switch (ff) {
-          case 0: t = "sin";
-              break;
-          case 1: t = "cos";
-              break;
-          case 2: t = "log";
-              break;
+    var ed = "";
+    for (var p = 0; p < Math.floor(Math.random()*1)+2; p++) {
+      var type = Math.floor(Math.random()*4);
+      var f;
+      switch(type) {
+        case 0: f = "sin"; break;
+        case 1: f = "cos"; break;
+        case 2: f = "log"; break;
+        case 3: f = "getFreqData"; break;
+
       }
-      disp += t+"("+_dFunct(t)+")";
-    }        
+      if (p > 0) ed="+";
+      disp += ed+(Math.random()*100.0)+"*"+f+"("+_dFunct(5)+")";
+    }
     disp += ")";
     shader += "gl_Position =  projectionMatrix * modelViewMatrix * vec4(position + normal*"+disp+", 1.0 );\n";
     shader += "}";
 
-    console.log(shader);
+    console.log("Generated shader:", shader);
     return shader;
   }
 
@@ -283,7 +299,7 @@ function Staccato(scene, camera) {
           transparent: true,
           opacity: 0.5,
           uniforms: this.uniforms,
-          vertexShader:   s,
+          vertexShader:  this.shaders[sn+"-vertex"],
           fragmentShader: this.shaders[sn+"-fragment"]
         }));
         this.scene.add(this.shapes[i]);
@@ -399,7 +415,7 @@ window.onload = function() {
   // Initializing a Staccato-powered scene
   stacc = new Staccato(scene, camera);
 
-  stacc.addShape({shape: "sphere", shader: "heart", position: new THREE.Vector3(0,0,0), size: 300});
+  stacc.addShape({shape: "sphere", shader: "heart", position: new THREE.Vector3(0,0,0), size: 1000});
 
 
 

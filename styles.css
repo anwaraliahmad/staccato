@@ -71,7 +71,15 @@ h1 {
   background-color: rgba(254, 254, 254, .5);
 }
 
+#add-shader {
+  position: relative;
+  bottom: 0;
+  background-color: (128, 164, 128, .6);
+}
+
 #play-button {
   background-color: green;
 }
+
+
 
