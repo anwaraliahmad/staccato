@@ -21,10 +21,6 @@ function Staccato(scene, camera) {
 
   // All the GLSL uniforms used by Staccato for visualization
   this.uniforms = {
-      disp: { 
-        type: "f",
-        value: 0.0
-      },
       time: { // Elapsed time 
         type: "f",
         value: 0.0
@@ -228,8 +224,8 @@ function Staccato(scene, camera) {
 
     var disp = "(";
     function _dFunct(f) {
-      var i = Math.random()*5 + 1;
-      if (n == 0) return "radius()+180.*time/3.14159"; 
+      var n = Math.floor(Math.random()*1) + 1;
+      if (n == 1) return "radius()+180.*time/3.14159"; 
       for (i = 0; i < n; i++) {
         var ff = Math.floor(Math.random()*3); 
         var t;
@@ -241,27 +237,28 @@ function Staccato(scene, camera) {
             case 2: t = "log";
                 break;
         }
-        disp += t+"("+_dFunct(t)+")";
+        disp += (Math.random()*50)+"*"+t+"("+_dFunct(t)+")";
       }
-
-      var nn = Math.floor(Math.random()*5)+1;
-      for (i = 0; i < n; i++) {
-        var ff = Math.floor(Math.random()*3); 
-        var t;
-        switch (ff) {
-            case 0: t = "sin";
-                break;
-            case 1: t = "cos";
-                break;
-            case 2: t = "log";
-                break;
-        }
-        disp += t+"("+_dFunct(t)+")";
-      }        
-      disp += ")"
-      shader += "gl_Position =  projectionMatrix * modelViewMatrix * vec4(position + normal*"+disp+", 1.0 );\n";
-      shader += "}";
     }
+    var nn = Math.floor(Math.random()*0)+1;
+    for (i = 0; i < nn; i++) {
+      var ff = Math.floor(Math.random()*3); 
+      var t;
+      switch (ff) {
+          case 0: t = "sin";
+              break;
+          case 1: t = "cos";
+              break;
+          case 2: t = "log";
+              break;
+      }
+      disp += t+"("+_dFunct(t)+")";
+    }        
+    disp += ")";
+    shader += "gl_Position =  projectionMatrix * modelViewMatrix * vec4(position + normal*"+disp+", 1.0 );\n";
+    shader += "}";
+
+    console.log(shader);
     return shader;
   }
 
@@ -269,12 +266,30 @@ function Staccato(scene, camera) {
     var s = this.genShader();
     var sn = "//ID"+Math.floor(Math.random()*1254)+"//";
     this.shaderTypes.push(sn);
+    var vertex = document.createElement("script");
+    vertex.innerHTML = s;
+    vertex.id = sn+"-vertex";
     this.shaders[sn+"-vertex"] = s;
     this.shaders[sn+"-fragment"] = document.getElementById('wave-fragment');
     var node = document.createElement("div");
     node.innerHTML = sn;
     node.id = sn;
     document.getElementById('side-bar').appendChild(node);     
+    node.addEventListener('mouseover', function(e) {
+        for (var i = 0; i < this.shapes.length; i++) {
+        this.scene.remove(this.shapes[i]);
+        this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
+          wireframe: true,
+          transparent: true,
+          opacity: 0.5,
+          uniforms: this.uniforms,
+          vertexShader:   s,
+          fragmentShader: this.shaders[sn+"-fragment"]
+        }));
+        this.scene.add(this.shapes[i]);
+      }
+    }.bind(this), false);
+
   }
 
 

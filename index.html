@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <head>
 	<title> Staccato </title>
-	<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.js
-'></script>
+	<script src="three.min.js"></script>
 	<script src="./threex.windowresize.js"> </script>
 	<script src="./Detector.js"> </script>
 	<link href="https://fonts.googleapis.com/css?family=Exo+2:100" rel="stylesheet">
@@ -196,9 +195,9 @@
 
 <script id="wave-fragment" type="x-shader/x-fragment">
 	varying vec2 vUv;
-	varying float d; // displacement 
 	uniform float time;
 	uniform float frequency[512];
+	/*
 	uniform float mDb;
 
 	float LinearToDecibel(float linear)
@@ -217,7 +216,7 @@
     for (int i=0; i< 512; i++) {
         if (i == id) return frequency[i];
     }
-	}
+	}*/
 	void main() {;
 		// Making the color a red scale with respect to vertex displacement
 	  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
