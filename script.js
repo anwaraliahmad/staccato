@@ -201,9 +201,9 @@ function Staccato(scene, camera) {
       transparent: true,
       opacity: 0.5,
       uniforms: this.uniforms,
-      vertexShader:   this.genShader(),
+      vertexShader:   this.shaders[shader+"-vertex"],
       //vertexShader:   document.getElementById(shader + '-vertex').textContent,
-      fragmentShader: document.getElementById(shader + '-fragment').textContent
+      fragmentShader: this.shaders[shader+"-fragment"]
     });
 	
     var m = new THREE.Mesh(g, hm); // Building mesh 
@@ -218,7 +218,7 @@ function Staccato(scene, camera) {
   }.bind(this);
 
   // procedurally generate a shader 
-  this.genShader = function() {
+  this.genVertexShader = function() {
     var shader = "varying vec2 vUv;\n";
     shader += "uniform float time;\n"
               + "uniform float frequency[512];\n";
@@ -279,14 +279,19 @@ function Staccato(scene, camera) {
   }
 
   this.addShader = function() {
-    var s = this.genShader();
+    var s = this.genVertexShader();
     var sn = "//ID"+Math.floor(Math.random()*1254)+"//";
     this.shaderTypes.push(sn);
     var vertex = document.createElement("script");
     vertex.innerHTML = s;
     vertex.id = sn+"-vertex";
     this.shaders[sn+"-vertex"] = s;
-    this.shaders[sn+"-fragment"] = document.getElementById('wave-fragment');
+
+    var f = this.genFragmentShader();
+    var frag = document.createElement("script");
+    frag.innerHTML = f;
+    frag.id = sn+"-fragment";
+    this.shaders[sn+"-fragment"] = f;
     var node = document.createElement("div");
     node.innerHTML = sn;
     node.id = sn;
@@ -297,7 +302,7 @@ function Staccato(scene, camera) {
         this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
           wireframe: true,
           transparent: true,
-          opacity: 0.5,
+          opacity: 1.,
           uniforms: this.uniforms,
           vertexShader:  this.shaders[sn+"-vertex"],
           fragmentShader: this.shaders[sn+"-fragment"]
@@ -308,6 +313,34 @@ function Staccato(scene, camera) {
 
   }
 
+  this.genFragmentShader = function() {
+    var shader = "varying vec2 vUv;\n";
+    shader += "uniform float time;\n"
+    shader += "void main() { \n";
+    function _cFunct (n) {
+      if (n == 1) return "time/180.";
+      n--;
+      for (i = 0; i < n+1; i++) {
+        var ff = Math.floor(Math.random()*3); 
+        var t;
+        switch (ff) {
+            case 0: t = "cos";
+                break;
+            case 1: t = "log";
+                break;
+            case 2: t = "sin";
+                break;
+        }
+
+        return ""+(Math.random()*12.0*(1./(n+1.)))+"*"+t+"("+_cFunct(n)+")";
+
+      }
+    }
+    shader += "gl_FragColor = vec4(.1*sin("+_cFunct(2)+"), 0.1*cos("+_cFunct(2)+"), 0.1, 1.0);\n";
+    shader += "}";
+    console.log("What the run");
+    return shader;
+  }
 
   // Update scene
   this.update = function(delta) {
@@ -379,8 +412,8 @@ window.onload = function() {
   // Setup WebGL renderer full page
   renderer  = new THREE.WebGLRenderer({antialias: false});
   renderer.setSize( window.innerWidth, window.innerHeight );
-  var fogColor = new THREE.Color(0x32CD32)
-  renderer.setClearColor(new THREE.Color(0xC0C0ff), .5);
+  var fogColor = new THREE.Color(0xFFFAFA)
+  renderer.setClearColor(new THREE.Color(0xffffff), 1);
   document.body.appendChild( renderer.domElement );
 
   // Setup a scene and camera
