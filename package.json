@@ -1,0 +1,21 @@
+{
+  "name": "staccato",
+  "version": "1.0.0",
+  "description": "WebGL music visualizer",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "babel src -d lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://cptsouma@bitbucket.org/cptsouma/staccato.git"
+  },
+  "author": "Anwar Ali-Ahmad <@anwaraliahmad>",
+  "license": "MIT",
+  "homepage": "https://bitbucket.org/cptsouma/staccato#readme",
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-preset-env": "^1.1.7"
+  }
+}

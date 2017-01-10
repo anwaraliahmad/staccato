@@ -55,9 +55,8 @@ h1 {
 }
 
 #side-bar div {
-  padding: 10px;
-  padding-top: 50px;
-  margin: 10px;
+
+  height: 20px;
   background-color: rgba(128, 128, 128, .6);
   color: white;
 }
