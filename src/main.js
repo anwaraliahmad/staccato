@@ -4,11 +4,12 @@
 // github.com/anwaraliahmad/staccato
 
 
-var scene, renderer, camera, clock, winResize;
+import * as THREE from "./three";
+
+var scene, renderer, camera, clock;
 var ambientLight, frontLight, backLight;
 
 var uniforms, geometry, material, skyBox;
-var winResize;
 
 // STACCATO OBJECT 
 function Staccato(scene, camera) {
@@ -370,17 +371,13 @@ var stacc;
 
 // INITIALIZATION (happens once the window loads) 
 window.onload = function() {
-
-  if( !Detector.webgl ){
-    Detector.addGetWebGLMessage();
-    throw 'WebGL Not Available'
-  } 
   
   // Setup WebGL renderer full page
   renderer  = new THREE.WebGLRenderer({antialias: false});
   renderer.setSize( window.innerWidth, window.innerHeight );
   var fogColor = new THREE.Color(0xFFFAFA)
   renderer.setClearColor(new THREE.Color(0xffffff), 1);
+  console.log("Render", renderer);
   document.body.appendChild( renderer.domElement );
 
   // Setup a scene and camera
@@ -392,7 +389,6 @@ window.onload = function() {
   camera.position.y = 0;
  
   clock = new THREE.Clock();
-  winResize = new THREEx.WindowResize(renderer, camera)
 
   
   
@@ -420,8 +416,8 @@ window.onload = function() {
 
 
   // Render loop 
- 
-  requestAnimationFrame(function animate() {
+  var delta = 0;
+  function animate() {
 
     requestAnimationFrame( animate );//keep looping
 
@@ -430,7 +426,9 @@ window.onload = function() {
     stacc.update(delta);
 
     renderer.render( scene, camera ); // render frame
-  })
+  }
+
+  animate();
 
 }
 
