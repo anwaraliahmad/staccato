@@ -7,10 +7,13 @@ html, body {
 }
 
 body {
-  margin: 0px; 
-  background-color: #bbbbbb; 
+  margin: 0px;
+  background-color: #bbbbbb;
   overflow: hidden;
   z-index: 49;
+}
+
+body:hover {
 }
 
 .banner {
@@ -25,7 +28,7 @@ h1 {
   color: white;
 }
 
-.bar { 
+.bar {
   position: fixed;
   display: table;
   bottom: 0;
@@ -40,28 +43,36 @@ h1 {
   padding: auto;
   display: table-cell;
   font-size: 72px;
-  text-align: center; 
+  text-align: center;
   color: white;
 
 }
+.right {
+  float:right;
+  right: 0;
+}
+.left {
+  float: left;
+  left: 0;
+}
 
-#side-bar {
+.side-bar {
   position: fixed;
   float:right;
   width: 10%;
   height: 100%;
   padding-top: 200px;
-  right: 0;
 }
 
-#side-bar div {
+.side-bar div {
 
   height: 20px;
   background-color: rgba(128, 128, 128, .6);
   color: white;
+  cursor: default;
 }
 
-#side-bar div:hover {
+.side-bar div:hover {
   background-color: white;
   color: black;
 }
@@ -81,5 +92,16 @@ h1 {
   background-color: green;
 }
 
+.impressum {
+  color: white;
+  position: fixed;
+  bottom: 0;
+  z-index: 80;
+}
 
+.impressum * {
+  display: inline;
+  font-size: 12px;
+  text-align: left;
+}
 
