@@ -16,9 +16,14 @@ gulp.task('js', function() {
         .pipe(gulp.dest('dist'))
 })
 
+gulp.task('wow', function(){ 
+
+	console.log("EHwiopdnaois")
+})
+
 
 // Start the server 
 gulp.task('server', ['js'], function() {
+		gulp.watch(__dirname + '/src/*.js', ['js'])
 		bs.init({server: './dist'})
-		bs.watch(__dirname + '/src/*.js', ['js']);
 })

@@ -48,7 +48,7 @@ class Main {
 
 
 
-    stacc.addShape({shape: "tetrahedron", shader: "generate", position: new THREE.Vector3(0,0,0), size: 800});
+    stacc.addShape({shape: "sphere", shader: "generate", position: new THREE.Vector3(0,0,0), size: 800});
 
 	}
 

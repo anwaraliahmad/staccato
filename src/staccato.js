@@ -61,6 +61,7 @@ class Staccato {
 		this.mouse = {x: 0, y:0};
 		this.objectMat = [];
 		this.shapes = [];
+		this.selectedShape = 0;
 
 
 		document.addEventListener("mousemove", function(e) {
@@ -88,6 +89,35 @@ class Staccato {
 		this.fileDrop = document.getElementById("file-drop");
 		this.fileDrop.addEventListener('dragover', this.fileDragHover, false);
 		this.fileDrop.addEventListener('drop', this.fileHandler, false);
+
+		var node = document.createElement("div");
+		node.innerHTML = "GENERATE SHAPE";
+		node.id = "add-shape";
+		var s = this;
+		document.getElementById('shapes').appendChild(node);
+		node.addEventListener('click', function(e) {
+			var r = Math.floor(Math.random()*5)
+			var g;
+	    switch(r) {
+	      case 0: g = 'plane'; break;
+	      case 1: g = 'sphere'; break;
+	      case 2: g = 'cube'; break;
+	      case 3:  g = 'circle'; break;
+	      case 4: g = 'tetrahedron'; break;
+	    }
+      s.addShape({shape: g, shader: "generate", position: new THREE.Vector3(Math.random()*1000-500,Math.random()*1000-500,Math.random()*1000-500), size: Math.random()*800});
+      var id = ""+(s.shapes.length-1);
+      var n = document.createElement("div")
+			n.innerHTML = g+id
+			n.id = id
+			n.addEventListener('click', function(e) {
+				s.selectedShape = e.target.id
+			}) 
+			document.getElementById('shapes').removeChild(node)
+			document.getElementById('shapes').appendChild(n)
+			document.getElementById('shapes').appendChild(node)
+		});
+
 
 		let shades = document.getElementById('shaders').childNodes;
 		var s = this;
@@ -167,20 +197,17 @@ class Staccato {
 	// Change the shader for every music visualizing object in the scene.
 	changeShader(e) {
 		var shader = e.target.id;
-		var l = this.shapes.length;
-	  for (var i = 0; i < l; i++) {
-	      this.scene.remove(this.shapes[i]);
-	      this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
-	        wireframe: true,
-	        transparent: true,
-	        opacity: 0.5,
-	        uniforms: this.uniforms,
-	        vertexShader:   document.getElementById(shader + '-vertex').textContent,
-	        fragmentShader: document.getElementById(shader + '-fragment').textContent
-	      }));
-	      this.scene.add(this.shapes[i]);
-	    //  console.log(shader);
-		}
+		var i = this.selectedShape		
+    this.scene.remove(this.shapes[i])
+    this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
+      wireframe: true,
+      transparent: true,
+      opacity: 0.5,
+      uniforms: this.uniforms,
+      vertexShader:   document.getElementById(shader + '-vertex').textContent,
+      fragmentShader: document.getElementById(shader + '-fragment').textContent
+    }));
+    this.scene.add(this.shapes[i]);
 	}
 
   // Add a shape with Staccato's shaders to the scene
@@ -193,6 +220,7 @@ class Staccato {
     switch(shape) {
       case "plane": g = new THREE.PlaneGeometry(size,size,128,128); break;
       case "sphere": g = new THREE.SphereGeometry(size,128,128); break;
+      case "cube": g = new THREE.BoxGeometry(size, size,128,128); break;
       case "circle":  g = new THREE.CircleGeometry(size, 256 ); break;
       case "tetrahedron": g = new THREE.TetrahedronGeometry(size, 1);
     }
@@ -275,6 +303,8 @@ class Staccato {
       if (p > 0) ed="+";
 			var dd = _dFunct(5);
       disp += ed+(Math.random()*100.0)+"*"+f+"("+dd+")";
+      if (f == "getFreqData")
+      	disp += "*"+disp
     }
     disp += ")";
     shader += "gl_Position =  projectionMatrix * modelViewMatrix * vec4(position + normal*"+disp+", 1.0 );\n";
