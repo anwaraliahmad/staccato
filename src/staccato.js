@@ -140,7 +140,7 @@ class Staccato {
 	    e.target.className = (e.type === 'dragover' ? 'hover' : '');
   	}
 
-  		// Retrieve data from dropped file to be decoded
+  	// Retrieve data from dropped file to be decoded
 	fileHandler (e) {
 		e.preventDefault();
 		e.stopPropagation();

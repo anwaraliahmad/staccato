@@ -16,14 +16,11 @@ gulp.task('js', function() {
         .pipe(gulp.dest('dist'))
 })
 
-gulp.task('wow', function(){ 
-
-	console.log("EHwiopdnaois")
-})
 
 
 // Start the server 
-gulp.task('server', ['js'], function() {
-		gulp.watch(__dirname + '/src/*.js', ['js'])
-		bs.init({server: './dist'})
+// Usage example: `$ node node_modules/gulp/bin/gulp.js server`
+gulp.task('server',function() {
+    gulp.watch(__dirname + '/src/*.js', gulp.series('js'))
+    bs.init({server: './dist'})
 })
