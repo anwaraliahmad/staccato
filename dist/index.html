@@ -11,18 +11,14 @@
 
 		</h3>
 	</div>
-<<<<<<< HEAD
-	<div id="shapes" class="side-bar left">
-=======
+	<!-- div id="shapes" class="side-bar left"> -->
 	<div id="side-bar">
->>>>>>> parent of 28187af... Implemented an automatic interpretation and build system
 
 	</div>
 	<div  id="file-drop" class="bar">
 	</div>
 
- 
-	<script src="./script.js"></script>
+	<script src="./bundle.js"></script>
 </body>
 
 <script type="application/x-glsl" id="sky-vertex">  
@@ -130,7 +126,7 @@
 
 	// Length from center at position
 	float radius(vec3 p) {
-		return sqrt(p.x*p.x + p.x*p.x);
+		return sqrt(p.x*p.x);
 	}
 
 	// Adjusting for minimum decibel values given by FFT
@@ -148,15 +144,15 @@
 		d = - d*d;
 		d += LinearToDecibel(frequency[int(radius(position))]);
 		d += d/15.;
-		vec3 newposition = position + normal * d ;
+		vec3 newposition = position + normal * d * n;
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
 	}
 </script>
 
 <script id="abyss-fragment" type="x-shader/x-fragment">
 	varying vec2 vUv;
+	varying float d; 
 	uniform float time;
-	uniform float od; 
 
 	// Adjusting UV vector to account for origin of coordinate system
 	float radius(vec2 uv) {
@@ -169,8 +165,7 @@
 
 		// compose the colour using the UV coordinate
 		// and modulate it with the noise like ambient occlusion
-	 	gl_FragColor = vec4(1.0- 1.0*sin(radius(vUv)*od)*od, 1.0 - od*1.0*cos(radius(vUv)*od), 1.0, 1.0 );
-
+	 	gl_FragColor = vec4(1.0 - 0.5*sin(radius(vUv)*d)*d, 1.0 - d*0.5*cos(radius(vUv)*d), 1.0*d, 1.0 );
 	}
 </script>
 
@@ -245,8 +240,8 @@
 	void main() {
 	    vUv = uv;
 	    
-			// Displacement is a function of the FFT frequencies 
-			// provided by the Web Audio API's AudioNode analyser
+		// Displacement is a function of the FFT frequencies 
+		// provided by the Web Audio API's AudioNode analyser
 	    disp = LinearToDecibel(frequency[int(radius(position))]);
 
 	   	vec3 newposition = position + normal*disp*disp/15.;

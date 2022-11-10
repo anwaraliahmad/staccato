@@ -47,10 +47,10 @@ function Staccato(scene, camera) {
     document.getElementById('side-bar').appendChild(node);
   }  
 
-  var node = document.createElement("div");
-  node.innerHTML = "+";
-  node.id = "add-shader";
-  document.getElementById('side-bar').appendChild(node);  
+  var genShaderButton = document.createElement("div");
+  genShaderButton.innerHTML = "+";
+  genShaderButton.id = "add-shader";
+  document.getElementById('side-bar').appendChild(genShaderButton);  
 
   // Defining audio context
   this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -97,6 +97,42 @@ function Staccato(scene, camera) {
       this.scene.add(this.shapes[i]);
       console.log(shader);
     }
+  }.bind(this);
+
+  this.addShader = function(e) {
+    console.log(e.target.id);
+    var s = this.genVertexShader();
+    var sn = "//ID"+Math.floor(Math.random()*1254)+"//";
+    this.shaderTypes.push(sn);
+    var vertex = document.createElement("script");
+    vertex.innerHTML = s;
+    vertex.id = sn+"-vertex";
+    this.shaders[sn+"-vertex"] = s;
+
+    var f = this.genFragmentShader();
+    var frag = document.createElement("script");
+    frag.innerHTML = f;
+    frag.id = sn+"-fragment";
+    this.shaders[sn+"-fragment"] = f;
+    var node = document.createElement("div");
+    node.innerHTML = sn;
+    node.id = sn;
+    document.getElementById('side-bar').appendChild(node);     
+    node.addEventListener('mouseover', function(e) {
+      for (var i = 0; i < this.shapes.length; i++) {
+        this.scene.remove(this.shapes[i]);
+        this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
+          wireframe: true,
+          transparent: true,
+          opacity: 1.,
+          uniforms: this.uniforms,
+          vertexShader:  this.shaders[sn+"-vertex"],
+          fragmentShader: this.shaders[sn+"-fragment"]
+        }));
+        this.scene.add(this.shapes[i]);
+      }
+    }.bind(this), false);
+    console.log(node);
   }.bind(this);
 
 
@@ -174,13 +210,15 @@ function Staccato(scene, camera) {
 
   var shades = document.getElementById('side-bar').childNodes;
   for (var i = 1; i < shades.length; i++) {
-    if (shades[i].id == 'add-shader') continue;
+    if (shades[i].id == 'add-shader') {
+      console.log("hi")
+      shades[i].addEventListener('mouseover', this.addShader, false);
+    }
     shades[i].addEventListener('mouseover', this.changeShader, false);
   }
 
-  node.addEventListener('mouseover', this.addShader, false);
-
-
+  genShaderButton.addEventListener('mouseover', this.addShader, false);
+  //this.addShader();
 
   document.addEventListener("mousemove", function(e) {
     e.preventDefault();
@@ -282,41 +320,6 @@ function Staccato(scene, camera) {
     return shader;
   }
 
-  this.addShader = function() {
-    var s = this.genVertexShader();
-    var sn = "//ID"+Math.floor(Math.random()*1254)+"//";
-    this.shaderTypes.push(sn);
-    var vertex = document.createElement("script");
-    vertex.innerHTML = s;
-    vertex.id = sn+"-vertex";
-    this.shaders[sn+"-vertex"] = s;
-
-    var f = this.genFragmentShader();
-    var frag = document.createElement("script");
-    frag.innerHTML = f;
-    frag.id = sn+"-fragment";
-    this.shaders[sn+"-fragment"] = f;
-    var node = document.createElement("div");
-    node.innerHTML = sn;
-    node.id = sn;
-    document.getElementById('side-bar').appendChild(node);     
-    node.addEventListener('mouseover', function(e) {
-        for (var i = 0; i < this.shapes.length; i++) {
-        this.scene.remove(this.shapes[i]);
-        this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
-          wireframe: true,
-          transparent: true,
-          opacity: 1.,
-          uniforms: this.uniforms,
-          vertexShader:  this.shaders[sn+"-vertex"],
-          fragmentShader: this.shaders[sn+"-fragment"]
-        }));
-        this.scene.add(this.shapes[i]);
-      }
-    }.bind(this), false);
-
-  }
-
   this.genFragmentShader = function() {
     var shader = "varying vec2 vUv;\n";
     shader += "uniform float time;\n"
@@ -410,7 +413,7 @@ window.onload = function() {
 
 
   // Initializing a Staccato-powered scene
-  stacc = new Staccato(scene, camera);
+  var stacc = new Staccato(scene, camera);
 
   stacc.addShape({shape: "sphere", shader: "heart", position: new THREE.Vector3(0,0,0), size: 1000});
 
