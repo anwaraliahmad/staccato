@@ -1,45 +1,57 @@
 <!DOCTYPE html>
 <head>
-	<title> Staccato </title>
+	<title> Staccato (DEMO) </title>
 	<link href="https://fonts.googleapis.com/css?family=Exo+2:100" rel="stylesheet">
 	<link href="./styles.css" rel="stylesheet"/>
 </head>
 <body  id="file-drop">
 	<div class="banner bar">
-		<h1> Staccato // Drag + Drop a Song  // Pick a Shader  // Enjoy</h1>
-		<h3 id="console"> 
+		<h1> Staccato (DEMO) // Drag + Drop a Song  // Pick a Shader  // Enjoy</h1>
+		<h3 id="console">
 
 		</h3>
 	</div>
-	<!-- div id="shapes" class="side-bar left"> -->
-	<div id="side-bar">
+	<div id="shapes" class="side-bar left">
 
 	</div>
-	<div  id="file-drop" class="bar">
+
+	<div id="shaders" class="side-bar right">
+
+	</div>
+
+	<div class="bar">
+
+	</div>
+
+	<div class="impressum">
+		<small> Impressum: </small>
+		<h2> Anwar Ali-Ahmad </h2>
 	</div>
 
 	<script src="./bundle.js"></script>
+
 </body>
 
-<script type="application/x-glsl" id="sky-vertex">  
-	varying vec2 vUV;
 
-	void main() {  
+<script type="application/x-glsl" id="sky-vertex">
+	varying highp vec2 vUV;
+
+	void main() {
 	  vUV = uv;
 	  vec4 pos = vec4(position, 1.0);
 	  gl_Position = projectionMatrix * modelViewMatrix * pos;
 	}
 </script>
 
-<script type="application/x-glsl" id="sky-fragment">  
-	uniform sampler2D texture;  
-	varying vec2 vUV;
+<script type="application/x-glsl" id="sky-fragment">
+	uniform sampler2D texture;
+	varying highp vec2 vUV;
 
-	void main() {  
-	  vec4 sample = texture2D(texture, vUV);
-	  gl_FragColor = vec4(sample.xyz, sample.w);
+	void main() {
+	  vec4 texSample = texture2D(texture, vUV);
+	  gl_FragColor = vec4(texSample.xyz, textSample.w);
 	}
-</script>  
+</script>
 
 <script id="abyss-vertex" type="x-shader/x-vertex">
 	//
@@ -51,7 +63,7 @@
 	//               Distributed under the MIT License. See LICENSE file.
 	//               https://github.com/ashima/webgl-noise
 	//               https://github.com/stegu/webgl-noise
-	// 
+	//
 
 	vec3 mod289(vec3 x) {
 	  return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -114,19 +126,19 @@
 	  return 130.0 * dot(m, g);
 	}
 
-	// Music visualizer vertex-displacement shader 
+	// Music visualizer vertex-displacement shader
 	// Anwar Ali-Ahmad
 	// Copyright (c) 2016 Anwar Ali-Ahmad. All rights reserved.
 
 	varying vec2 vUv;
 	varying float d;
-	uniform float time;	
+	uniform float time;
 	uniform float frequency[512];
 	uniform float mDb;
 
 	// Length from center at position
 	float radius(vec3 p) {
-		return sqrt(p.x*p.x);
+		return sqrt(p.x*p.x + p.x*p.x);
 	}
 
 	// Adjusting for minimum decibel values given by FFT
@@ -144,28 +156,39 @@
 		d = - d*d;
 		d += LinearToDecibel(frequency[int(radius(position))]);
 		d += d/15.;
-		vec3 newposition = position + normal * d * n;
+		vec3 newposition = position + normal * d ;
 		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
 	}
 </script>
 
 <script id="abyss-fragment" type="x-shader/x-fragment">
 	varying vec2 vUv;
-	varying float d; 
 	uniform float time;
+	uniform float frequency[512];
+	/*
+	uniform float mDb;
 
-	// Adjusting UV vector to account for origin of coordinate system
-	float radius(vec2 uv) {
-		uv.x -= .5;
-		uv.y -= .5;
-		return sqrt(uv.x*uv.x + uv.y*uv.y);
+	float LinearToDecibel(float linear)
+	{
+		return linear-mDb;
 	}
 
-	void main() {
+	float radius(vec2 u) {
+		float x = u.x-.5;
+		float y = u.y-.5;
+		return sqrt(x*x + y*y);
+	}
 
-		// compose the colour using the UV coordinate
-		// and modulate it with the noise like ambient occlusion
-	 	gl_FragColor = vec4(1.0 - 0.5*sin(radius(vUv)*d)*d, 1.0 - d*0.5*cos(radius(vUv)*d), 1.0*d, 1.0 );
+	// To work around GLSL compiler sometimes not accessing arrays properly
+	float getData(int id) {
+    for (int i=0; i< 512; i++) {
+        if (i == id) return frequency[i];
+    }
+	}*/
+	void main() {;
+		// Making the color a red scale with respect to vertex displacement
+	  gl_FragColor = vec4(.5, .0, .0, 1.0);
+
 	}
 </script>
 
@@ -214,7 +237,7 @@
 	}*/
 	void main() {;
 		// Making the color a red scale with respect to vertex displacement
-	  gl_FragColor = vec4(.02, .02, .02, 1.0);
+	  gl_FragColor = vec4(.5, .0, .0, 1.0);
 
 	}
 </script>
@@ -223,10 +246,10 @@
 	varying vec2 vUv;
 	varying float disp;// displacement
 	uniform float time;
-	uniform float frequency[512]; // FFT decibel data 
+	uniform float frequency[512]; // FFT decibel data
 	uniform float minDecibels;
 
-	// How far is coordinate from origin 
+	// How far is coordinate from origin
 	float radius(vec3 p) {
 		return sqrt(p.x*p.x+p.y*p.y);
 	}
@@ -239,9 +262,9 @@
 
 	void main() {
 	    vUv = uv;
-	    
-		// Displacement is a function of the FFT frequencies 
-		// provided by the Web Audio API's AudioNode analyser
+
+			// Displacement is a function of the FFT frequencies
+			// provided by the Web Audio API's AudioNode analyser
 	    disp = LinearToDecibel(frequency[int(radius(position))]);
 
 	   	vec3 newposition = position + normal*disp*disp/15.;
@@ -254,12 +277,10 @@
 <script id="heart-fragment" type="x-shader/x-fragment">
 	varying vec2 vUv;
 	varying float disp;
-	uniform float drop; 
 	uniform float time;
 
 	void main() {
-	    gl_FragColor = vec4(1.0, 1.0*sin(time), 1.0, 1.0);
-
+	    gl_FragColor = vec4(.0, .0, .0, 1.0);
 	}
 </script>
 
@@ -273,4 +294,3 @@
 
 	}
 </script>
-
