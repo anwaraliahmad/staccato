@@ -59,13 +59,13 @@ export default class Staccato {
       for (let i = 0; i < this.shaderTypes.length; i++) {
         this.shaders[this.shaderTypes[i]+"-vertex"] = document.getElementById(this.shaderTypes[i]+"-vertex").textContent;
         this.shaders[this.shaderTypes[i]+"-fragment"] = document.getElementById(this.shaderTypes[i]+"-fragment").textContent;
-        var node = document.createElement("div");
+        let node = document.createElement("div");
         node.innerHTML = this.shaderTypes[i];
         node.id = this.shaderTypes[i];
         document.getElementById('shaders').appendChild(node);
       }  
 
-      var node = document.createElement("div");
+      let node = document.createElement("div");
       node.innerHTML = "+";
       node.id = "add-shader";
       document.getElementById('shaders').appendChild(node);
@@ -78,8 +78,8 @@ export default class Staccato {
 
       // Adding drag + drop event listeners
       this.fileDrop = document.getElementById("file-drop");
-      this.fileDrop.addEventListener('dragover', this.fileDragHover, false);
-      this.fileDrop.addEventListener('drop', this.fileHandler, false);
+      this.fileDrop.addEventListener('dragover', this.fileDragHover.bind(this), false);
+      this.fileDrop.addEventListener('drop', this.fileHandler.bind(this), false);
 
       // Track mouse movement for scene / object orientation
       document.addEventListener("mousemove", (e) => {
@@ -103,10 +103,10 @@ export default class Staccato {
       e.stopPropagation();
       e.preventDefault();
       e.target.className = "";
-      var files = e.target.files || e.dataTransfer.files;
-      var reader = new FileReader();
+      let files = e.target.files || e.dataTransfer.files;
+      let reader = new FileReader();
       reader.onload = function (f) {
-        var dat = f.target.result;
+        let dat = f.target.result;
         this.initAudio(dat);
       }.bind(this);
 
@@ -118,7 +118,7 @@ export default class Staccato {
     }
 
     initAudio(data) {
-      var scope = this;
+      let scope = this;
       if (this.ctx.decodeAudioData) {
         this.ctx.decodeAudioData(data, function(buffer) {
           scope.play(buffer);
@@ -142,11 +142,11 @@ export default class Staccato {
     }
 
     addShape(params) {
-      var g; 
-      var shape = params.shape;
-      var shader = params.shader; 
-      var pos = params.position;
-      var size = params.size;
+      let g; 
+      let shape = params.shape;
+      let shader = params.shader; 
+      let pos = params.position;
+      let size = params.size;
       switch(shape) { 
         case "plane": g = new THREE.PlaneGeometry(size,size,32,32); break;
         case "sphere": g = new THREE.SphereGeometry(size,32,32); break;
@@ -155,11 +155,11 @@ export default class Staccato {
         case "tetrahedron": g = new THREE.TetrahedronGeometry(size, 1);
       }
       
-      var vs = (shader.toLowerCase() == "generate") ? ShaderUtil.genVertexShader() : this.shaders[shader+"-vertex"];
-      var fs = (shader.toLowerCase() == "generate") ? ShaderUtil.genFragmentShader() : this.shaders[shader+"-fragment"];
+      let vs = (shader.toLowerCase() == "generate") ? ShaderUtil.genVertexShader() : this.shaders[shader+"-vertex"];
+      let fs = (shader.toLowerCase() == "generate") ? ShaderUtil.genFragmentShader() : this.shaders[shader+"-fragment"];
   
 
-      var hm = new THREE.ShaderMaterial({
+      let hm = new THREE.ShaderMaterial({
         wireframe: true,
         transparent: true,
         opacity: 0.5,
@@ -169,7 +169,7 @@ export default class Staccato {
         fragmentShader: fs
       });
     
-      var m = new THREE.Mesh(g, hm); // Building mesh 
+      let m = new THREE.Mesh(g, hm); // Building mesh 
       m.name = shader + "-" + shape; // Giving ID to Object 
       m.position.set(pos.x, pos.y, pos.z);
       if (shape == "plane")  
@@ -179,26 +179,26 @@ export default class Staccato {
     }
 
     addShader() {
-      var s = ShaderUtil.genVertexShader();
-      var sn = `sn-${Math.random()*this.FFT_SIZE}`;
+      let s = ShaderUtil.genVertexShader();
+      let sn = `sn-${Math.random()*this.FFT_SIZE}`;
       this.shaderTypes.push(sn);
-      var vertex = document.createElement("script");
+      let vertex = document.createElement("script");
       vertex.innerHTML = s;
       vertex.id = sn+"-vertex";
       this.shaders[sn+"-vertex"] = s;
   
-      var f = ShaderUtil.genFragmentShader();
-      var frag = document.createElement("script");
+      let f = ShaderUtil.genFragmentShader();
+      let frag = document.createElement("script");
       frag.innerHTML = f;
       frag.id = sn+"-fragment";
       this.shaders[sn+"-fragment"] = f;
-      var node = document.createElement("div");
+      let node = document.createElement("div");
       node.innerHTML = sn;
       node.id = sn;
       document.getElementById('shaders').appendChild(node);
   
       node.addEventListener('click', (e) => {
-        for (var i = 0; i < this.shapes.length; i++) {
+        for (let i = 0; i < this.shapes.length; i++) {
           this.scene.remove(this.shapes[i]);
           this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
             wireframe: true,
@@ -216,8 +216,8 @@ export default class Staccato {
   
 
     changeShader(e)  {
-      var shader = e.target.id;
-      for (var i = 0; i < this.shapes.length; i++) {
+      let shader = e.target.id;
+      for (let i = 0; i < this.shapes.length; i++) {
         this.scene.remove(this.shapes[i]);
         this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
           wireframe: true,
@@ -240,9 +240,9 @@ export default class Staccato {
       this.analyser.getFloatFrequencyData(this.waveData);
       this.waveData = (this.source) ? this.waveData : [0.0, 0.0, 0.0];
       const average = array => array.reduce((a, b) => a + b) / array.length;
-      var avg = average(this.waveData);
+      let avg = average(this.waveData);
       // Update the uniforms for each object
-      for (var i = 0; i < this.shapes.length; i++) {
+      for (let i = 0; i < this.shapes.length; i++) {
         this.shapes[i].material.uniforms['frequency'].value = this.waveData; 
         this.shapes[i].material.uniforms['time'].value += delta;
       }

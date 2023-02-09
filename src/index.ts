@@ -1,54 +1,61 @@
 import * as THREE from 'three';
 import Staccato from './staccato';
 
-var scene: THREE.Scene, renderer: THREE.WebGLRenderer, camera: THREE.Camera;
-var clock: THREE.Clock,
- ambientLight: THREE.AmbientLight;
-var frontLight: THREE.DirectionalLight, backLight: THREE.DirectionalLight;
-
-var skyBox:  THREE.Mesh;
-var stacc; 
-var delta: number, waveData: Float32Array;
-
 class Main {
-	constructor () { // Set up the scene
-		scene = new THREE.Scene();
-		//this.scene.fog = new THREE.Fog(new THREE.Color(0xFFFAFA), .1, 1000);
-		renderer = new THREE.WebGLRenderer();
-		renderer.setSize(window.innerWidth, window.innerHeight);
-		renderer.setClearColor(new THREE.Color(0xffffff), 1);
 
-		camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 20000);
-		camera.position.z = 1000;
-		camera.position.y = 0;
+	// Critical THREE objects
+	scene: THREE.Scene;
+	renderer: THREE.WebGLRenderer;
+	camera: THREE.Camera;
+
+	// Scene lighting and objects
+	ambientLight: THREE.AmbientLight;
+	frontLight: THREE.DirectionalLight;
+	backLight: THREE.DirectionalLight;
+	skyBox: THREE.Mesh;
+
+	// Timing
+	clock: THREE.Clock;
+	delta: number;
+
+	visualizer: Staccato;
+
+	constructor () { // Set up the scene
+		this.scene = new THREE.Scene();
+		//this.scene.fog = new THREE.Fog(new THREE.Color(0xFFFAFA), .1, 1000);
+		this.renderer = new THREE.WebGLRenderer();
+		this.renderer.setSize(window.innerWidth, window.innerHeight);
+		this.renderer.setClearColor(new THREE.Color(0xffffff), 1);
+
+		this.camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 20000);
+		this.camera.position.z = 1000;
+		this.camera.position.y = 0;
 
 		try {
-			document.body.appendChild(renderer.domElement);
+			document.body.appendChild(this.renderer.domElement);
 		} catch (e) {
 			console.log("ERROR: Could not add renderer to document.");
 		}
 
-		clock = new THREE.Clock();
+		this.clock = new THREE.Clock();
 
 
   		// Industry-standard three-point lighting technique
-		var ambientLight= new THREE.AmbientLight( 0x020202 );
-		scene.add( ambientLight);
-		var frontLight  = new THREE.DirectionalLight('white', 1);
-		frontLight.position.set(0.5, 0.5, 2);
-		scene.add( frontLight );
-		var backLight = new THREE.DirectionalLight('white', 0.75);
-		backLight.position.set(-0.5, -0.5, -2);
-		scene.add( backLight );
-		delta = 0;
-		waveData = new Float32Array(512);
+		this.ambientLight= new THREE.AmbientLight( 0x020202 );
+		this.scene.add(this.ambientLight);
+		this.frontLight  = new THREE.DirectionalLight('white', 1);
+		this.frontLight.position.set(0.5, 0.5, 2);
+		this.scene.add(this.frontLight);
+		this.backLight = new THREE.DirectionalLight('white', 0.75);
+		this.backLight.position.set(-0.5, -0.5, -2);
+		this.scene.add(this.backLight);
+		this.delta = 0;
 
-		skyBox = this.initSkybox();
-		console.log(skyBox);
-		scene.add(skyBox); 
+		this.skyBox = this.initSkybox();
+		this.scene.add(this.skyBox); 
 
-		stacc = new Staccato(scene, camera);
-    	stacc.addShape({shape: "sphere", shader: "generate", position: new THREE.Vector3(0,0,0), size: 800});
+		this.visualizer = new Staccato(this.scene, this.camera);
+    	this.visualizer.addShape({shape: "sphere", shader: "heart", position: new THREE.Vector3(0,0,0), size: 800});
 	}
 
 	initSkybox() {
@@ -78,19 +85,18 @@ class Main {
 		return skyBox;
 	}
 
+	update() {
+		this.visualizer.update(this.clock.getDelta());
+		this.renderer.render(this.scene, this.camera); // render frame
+		requestAnimationFrame(this.update.bind(this)); // keep looping
+	}
+
 }
 // INITIALIZATION (happens once the globalThis loads) 
 globalThis.onload = () => {
   let main = new Main();
-
-  var animate = () => {
-    var d = clock.getDelta();
-    stacc.update(d);
-    renderer.render( scene, camera ); // render frame
-    requestAnimationFrame(animate);//keep looping
-  }
-
-  animate();
+  let animate = main.update.bind(main);
+  main.update();
 }
   
   
