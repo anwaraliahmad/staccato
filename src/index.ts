@@ -1,9 +1,10 @@
+// Entrance module
 import Main from './main'
 
-// INITIALIZATION (happens once the globalThis loads) 
+// Global initialization
 globalThis.onload = () => {
-  let main = new Main();
-  let animate = main.update.bind(main);
+  const main = new Main();
+  // Initiate runtime loop
   main.update();
 }
   

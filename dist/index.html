@@ -13,9 +13,9 @@
 <body  id="file-drop">
 	<div class="banner bar">
 		<h1> Staccato (DEMO) // Drag + Drop a Song  // Pick a Shader  // Enjoy</h1>
-		<h3 id="console">
+		<div id="console">
 
-		</h3>
+		</div>
 	</div>
 	<div id="shapes" class="side-bar left prevent-select">
 
@@ -25,7 +25,7 @@
 
 	</div>
 
-	<div class="bar">
+	<div id="bottom" class="bar">
 
 	</div>
 
@@ -243,7 +243,7 @@
 	}*/
 	void main() {;
 		// Making the color a red scale with respect to vertex displacement
-	  gl_FragColor = vec4(.5, .0, .0, 1.0);
+	  gl_FragColor = vec4(vec3(0.0), 1.0);
 
 	}
 </script>
@@ -286,7 +286,7 @@
 	uniform float time;
 
 	void main() {
-	    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+	    gl_FragColor = vec4(vec3(0.0), 1.0);
 	}
 </script>
 
@@ -296,7 +296,7 @@
 	uniform float time;
 
 	void main() {
-	    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0 )*sin(time*3.14*2.);
+	    gl_FragColor = vec4(vec3(0.0), 1.0 )*sin(time*3.14*2.);
 
 	}
 </script>

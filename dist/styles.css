@@ -26,6 +26,10 @@ body {
   text-align: center;
 }
 
+#console > div {
+  position: relative !important; 
+}
+
 h1 {
   float: left;
   color: white;
