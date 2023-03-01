@@ -13,6 +13,12 @@ body {
   z-index: 49;
 }
 
+.prevent-select {
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
+}
+
 .banner {
   position: fixed;
   top: 0;
@@ -46,7 +52,7 @@ h1 {
 }
 
 .right {
-  float:right;
+  float: right;
   right: 0;
 }
 .left {
@@ -56,7 +62,7 @@ h1 {
 
 .side-bar {
   position: fixed;
-  float:right;
+  float: right;
   width: 10%;
   height: 100%;
   padding-top: 200px;
@@ -73,6 +79,7 @@ h1 {
 .side-bar div:hover {
   background-color: white;
   color: black;
+  cursor: default;
 }
 
 .hover  {
@@ -93,14 +100,15 @@ h1 {
 .impressum {
   color: white;
   position: fixed;
-  bottom: 0;
+  bottom: 2em;
+  left: 2em;
   z-index: 80;
 }
 
 .impressum * {
   display: inline;
   font-size: 12px;
-  text-align: left;
+  text-align: center;
 }
 
 

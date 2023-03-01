@@ -1,11 +1,10 @@
 // Staccato handler class
 import * as THREE from 'three';
-import ShaderUtil from './shaderUtil'
+import { Shader, Shaders } from './shader';
+import ShaderUtil from './shaderUtil';
+import { Constants } from './constants'
 
 export default class Staccato {
-    private readonly PI2: number = Math.PI*2;
-    private readonly FFT_SIZE: number = 1024;
-    
     private ctx: globalThis.AudioContext;
     private analyser: AnalyserNode;
     private source;
@@ -16,7 +15,7 @@ export default class Staccato {
     private camera: THREE.Camera;
     private mouse = {x: 0, y: 0};
     private shaderTypes = ['heart', 'wave', 'abyss'];
-    private shaders: {[key: string]: string} = {};
+    private shaders: Shaders;
     private uniforms = {
       time: { // Elapsed time 
         type: "f",
@@ -45,26 +44,33 @@ export default class Staccato {
 
       // Defining audio context
       this.ctx = new (globalThis.AudioContext || globalThis.webkitAudioContext)();
+      
       // Analyser to retrive FFT data from audio stream
       this.analyser = this.ctx.createAnalyser();
-      this.analyser.fftSize = this.FFT_SIZE;
+      this.analyser.fftSize = Constants.FFT_SIZE;
       this.source;
-      this.waveData = new Float32Array(this.FFT_SIZE/2);
-
+      this.waveData = new Float32Array(Constants.FFT_SIZE/2);
+      this.shaders = new Shaders();
       this.initDOM();
     }
 
-    initDOM() {
+    initShaders() {
       // Load shaders supported by Staccato
       for (let i = 0; i < this.shaderTypes.length; i++) {
-        this.shaders[this.shaderTypes[i]+"-vertex"] = document.getElementById(this.shaderTypes[i]+"-vertex").textContent;
-        this.shaders[this.shaderTypes[i]+"-fragment"] = document.getElementById(this.shaderTypes[i]+"-fragment").textContent;
-        let node = document.createElement("div");
-        node.innerHTML = this.shaderTypes[i];
-        node.id = this.shaderTypes[i];
-        document.getElementById('shaders').appendChild(node);
+        const shaderID = this.shaderTypes[i];
+        const shaderObj: Shader = new Shader();
+        shaderObj.vertex = document.getElementById(this.shaderTypes[i]+"-vertex" );
+        shaderObj.fragment = document.getElementById(this.shaderTypes[i]+"-fragment");
+        shaderObj.element.innerHTML = this.shaderTypes[i];
+        shaderObj.element.id = this.shaderTypes[i];
+        shaderObj.element.addEventListener('click', this.changeShader.bind(this), false);
+        this.shaders.push(shaderObj);
+        this.shaders.element.append(shaderObj.element);
       }  
+    }
 
+    //  Add DOM element for procedurally generating a shader
+    initGenShader() {
       let node = document.createElement("div");
       node.innerHTML = "+";
       node.id = "add-shader";
@@ -74,8 +80,16 @@ export default class Staccato {
         document.getElementById('shaders').appendChild(node);
         node.addEventListener('click', this.changeShader, false);
       });
-  
+    }
 
+    // Initialize the UI and event listeners
+    initDOM() {
+      // Add premade shaders into DOM and memory
+      this.initShaders();
+
+      // Add "generate shader" option to DOM
+      this.initGenShader();
+  
       // Adding drag + drop event listeners
       this.fileDrop = document.getElementById("file-drop");
       this.fileDrop.addEventListener('dragover', this.fileDragHover.bind(this), false);
@@ -90,6 +104,7 @@ export default class Staccato {
     }
 
 
+    // Override default file drag & drop behavior
     fileDragHover(e) {
       e.preventDefault();
       e.stopPropagation();
@@ -113,10 +128,7 @@ export default class Staccato {
       reader.readAsArrayBuffer(files[0]);
     }
 
-    load(url: string) {
-
-    }
-
+    // Decode an audio file
     initAudio(data) {
       let scope = this;
       if (this.ctx.decodeAudioData) {
@@ -130,6 +142,7 @@ export default class Staccato {
       }
     }
 
+    // Play buffer from audio file
     play(buffer) {
       this.analyser = this.ctx.createAnalyser();
       if (this.source)
@@ -141,6 +154,7 @@ export default class Staccato {
       this.source.start(0);
     }
 
+    // Initialize a new mesh for the scence
     addShape(params) {
       let g; 
       let shape = params.shape;
@@ -155,8 +169,10 @@ export default class Staccato {
         case "tetrahedron": g = new THREE.TetrahedronGeometry(size, 1);
       }
       
-      let vs = (shader.toLowerCase() == "generate") ? ShaderUtil.genVertexShader() : this.shaders[shader+"-vertex"];
-      let fs = (shader.toLowerCase() == "generate") ? ShaderUtil.genFragmentShader() : this.shaders[shader+"-fragment"];
+      const vShader = document.getElementById(`${shader}-vertex` );
+      const fShader = document.getElementById(`${shader}-fragment`);
+      let vs = (shader.toLowerCase() == "generate") ? ShaderUtil.genVertexShader() : vShader.textContent;
+      let fs = (shader.toLowerCase() == "generate") ? ShaderUtil.genFragmentShader() : fShader.textContent;
   
 
       let hm = new THREE.ShaderMaterial({
@@ -178,26 +194,26 @@ export default class Staccato {
       this.scene.add(m);
     }
 
+    // Procedurally generate new shader and add UI element
     addShader() {
-      let s = ShaderUtil.genVertexShader();
-      let sn = `sn-${Math.random()*this.FFT_SIZE}`;
+      const formatID = (id) => id.toFixed(4);
+      const s = ShaderUtil.genVertexShader();
+      const f = ShaderUtil.genFragmentShader();
+      let sn = ShaderUtil.genRandID();
       this.shaderTypes.push(sn);
-      let vertex = document.createElement("script");
-      vertex.innerHTML = s;
-      vertex.id = sn+"-vertex";
-      this.shaders[sn+"-vertex"] = s;
-  
-      let f = ShaderUtil.genFragmentShader();
-      let frag = document.createElement("script");
-      frag.innerHTML = f;
-      frag.id = sn+"-fragment";
-      this.shaders[sn+"-fragment"] = f;
+      
+      // Create new procedural shader
+      const shaderObj = new Shader();
+      shaderObj.setShaderHTML( `${sn}-vertex`, s);
+      shaderObj.setShaderHTML( `${sn}-fragment`, f, false);
       let node = document.createElement("div");
       node.innerHTML = sn;
       node.id = sn;
+      
+      // Add select to shader list
       document.getElementById('shaders').appendChild(node);
-  
       node.addEventListener('click', (e) => {
+        // Listensers for the cases of additional geometries (Not yet implemented)
         for (let i = 0; i < this.shapes.length; i++) {
           this.scene.remove(this.shapes[i]);
           this.shapes[i] = new THREE.Mesh(this.shapes[i].geometry, new THREE.ShaderMaterial({
@@ -205,16 +221,16 @@ export default class Staccato {
             transparent: true,
             opacity: 1.,
             uniforms: this.uniforms,
-            vertexShader:  this.shaders[sn+"-vertex"],
-            fragmentShader: this.shaders[sn+"-fragment"]
+            vertexShader:  shaderObj.vertex.textContent,
+            fragmentShader: shaderObj.fragment.textContent
           }));
           this.scene.add(this.shapes[i]);
         }
       }, false);
   
     }
-  
-
+    
+    // Apply the selected shader (precoded or procedural)
     changeShader(e)  {
       let shader = e.target.id;
       for (let i = 0; i < this.shapes.length; i++) {
@@ -241,6 +257,7 @@ export default class Staccato {
       this.waveData = (this.source) ? this.waveData : [0.0, 0.0, 0.0];
       const average = array => array.reduce((a, b) => a + b) / array.length;
       let avg = average(this.waveData);
+      
       // Update the uniforms for each object
       for (let i = 0; i < this.shapes.length; i++) {
         this.shapes[i].material.uniforms['frequency'].value = this.waveData; 

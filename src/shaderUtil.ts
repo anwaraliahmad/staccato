@@ -2,7 +2,23 @@
 // Copyright (c) 2017-2018 Anwar Ali-Ahmad
 // Licensed under MIT
 
+enum ShaderFunctions {
+  getFreqData,
+  sin,
+  cos,
+  log
+}
+
 export default class ShaderUtil {
+  static readonly PRECISION: number = 0;
+  static readonly POOL_SIZE: number = 1024;
+  static readonly ID_PREFIX: string = "sn";
+
+  public static genRandID() {
+    const numID = Math.round(Math.random()*this.POOL_SIZE);
+    return `${this.ID_PREFIX}-${numID}`;
+  }
+
   public static genVertexShader(): string {
     let shader = "";
     // Basic uniforms
@@ -27,17 +43,7 @@ export default class ShaderUtil {
       }
       for (let i = 0; i < n + 1; i++) {
         const ff = Math.floor(Math.random() * 3) + 1;
-        let t;
-        switch (ff) {
-            case 0: t = "getFreqData";
-                    break;
-            case 1: t = "cos";
-                    break;
-            case 2: t = "log";
-                    break;
-            case 3: t = "sin";
-                    break;
-        }
+        let t = ShaderFunctions[ff];
         return `${(Math.random() * 12.0 * (1 / (n + 1)))}*${t}(${_dFunct(n)})`;
       }
     }
@@ -45,22 +51,12 @@ export default class ShaderUtil {
     let ed = "";
     for (let p = 0; p < Math.floor(Math.random() * 1) + 2; p++) {
       const type = Math.floor(Math.random() * 4);
-      let f;
-      switch (type) {
-        case 0: f = "sin"; break;
-        case 1: f = "cos"; break;
-        case 2: f = "log"; break;
-        case 3: f = "getFreqData"; break;
-
-      }
+      let f = ShaderFunctions[type];
       if (p > 0) {
         ed = "+";
       }
       const dd = _dFunct(5);
       disp += ed + (Math.random() * 100.0) + "*" + f + "(" + dd + ")";
-      /*if (f === "getFreqData") {
-        disp = `* ${disp}`;
-      }*/
     }
     disp += ")";
     shader += "gl_Position =  projectionMatrix * modelViewMatrix * vec4(position + normal*" + disp + ", 1.0 );\n";
@@ -80,15 +76,7 @@ export default class ShaderUtil {
     for (let i: number = 0; i <= count; i++) {
       // Randomly select next shader function type
       const ff: number = Math.floor(Math.random() * 3);
-      let functType: string;
-      switch (ff) {
-          case 0: functType = "cos";
-                  break;
-          case 1: functType = "log";
-                  break;
-          case 2: functType = "sin";
-                  break;
-      }
+      let functType: string = ShaderFunctions[ff];
       // Random number to scale fragment return intensity
       const randomScale: number =  Math.random() * 12.0
       // Shader string for function call (recursively generate more functions
@@ -115,4 +103,6 @@ export default class ShaderUtil {
     shader += "}";
     return shader;
   }
+
+
 }
