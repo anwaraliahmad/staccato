@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<head>
+	<title> Staccato (DEMO) </title>
+	<!-- Main font thanks to Google Fonts (fonts.google.com)-->
+	<link href="https://fonts.googleapis.com/css?family=Exo+2:100" rel="stylesheet">
+	<!-- Custom style sheet -->
+	<link href="./dist/styles.css" rel="stylesheet"/>
+	<!-- Created via favicon.cc -->
+	<link href="./dist/res/favicon.ico" rel="icon" type="image/x-icon" />
+</head>
+
+<body  id="file-drop">
+	<div class="banner bar">
+		<h1> Staccato (DEMO) // Drag + Drop a Song  // Pick a Shader  // Enjoy</h1>
+		<div id="console">
+
+		</div>
+	</div>
+	<div id="shapes" class="side-bar left prevent-select">
+
+	</div>
+
+	<div id="shaders" class="side-bar right prevent-select">
+
+	</div>
+
+	<div id="bottom" class="bar">
+
+	</div>
+
+	<div class="impressum">
+		<small> Impressum: </small>
+		<h2> Anwar Ali-Ahmad </h2>
+	</div>
+
+	<script src="./bundle.js"></script>
+
+</body>
+
+
+<script type="application/x-glsl" id="sky-vertex">
+	varying highp vec2 vUV;
+
+	void main() {
+	  vUV = uv;
+	  vec4 pos = vec4(position, 1.0);
+	  gl_Position = projectionMatrix * modelViewMatrix * pos;
+	}
+</script>
+
+<script type="application/x-glsl" id="sky-fragment">
+	uniform sampler2D texture;
+	varying highp vec2 vUV;
+
+	void main() {
+	  vec4 texSample = texture2D(texture, vUV);
+	  gl_FragColor = vec4(texSample.xyz, textSample.w);
+	}
+</script>
+
+<script id="abyss-vertex" type="x-shader/x-vertex">
+	//
+	// Description : Array and textureless GLSL 2D simplex noise function.
+	//      Author : Ian McEwan, Ashima Arts.
+	//  Maintainer : stegu
+	//     Lastmod : 20110822 (ijm)
+	//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.
+	//               Distributed under the MIT License. See LICENSE file.
+	//               https://github.com/ashima/webgl-noise
+	//               https://github.com/stegu/webgl-noise
+	//
+
+	vec3 mod289(vec3 x) {
+	  return x - floor(x * (1.0 / 289.0)) * 289.0;
+	}
+
+	vec2 mod289(vec2 x) {
+	  return x - floor(x * (1.0 / 289.0)) * 289.0;
+	}
+
+	vec3 permute(vec3 x) {
+	  return mod289(((x*34.0)+1.0)*x);
+	}
+
+	float snoise(vec2 v)
+	  {
+	  const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0
+	                      0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)
+	                     -0.577350269189626,  // -1.0 + 2.0 * C.x
+	                      0.024390243902439); // 1.0 / 41.0
+	// First corner
+	  vec2 i  = floor(v + dot(v, C.yy) );
+	  vec2 x0 = v -   i + dot(i, C.xx);
+
+	// Other corners
+	  vec2 i1;
+	  //i1.x = step( x0.y, x0.x ); // x0.x > x0.y ? 1.0 : 0.0
+	  //i1.y = 1.0 - i1.x;
+	  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+	  // x0 = x0 - 0.0 + 0.0 * C.xx ;
+	  // x1 = x0 - i1 + 1.0 * C.xx ;
+	  // x2 = x0 - 1.0 + 2.0 * C.xx ;
+	  vec4 x12 = x0.xyxy + C.xxzz;
+	  x12.xy -= i1;
+
+	// Permutations
+	  i = mod289(i); // Avoid truncation effects in permutation
+	  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+			+ i.x + vec3(0.0, i1.x, 1.0 ));
+
+	  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+	  m = m*m ;
+	  m = m*m ;
+
+	// Gradients: 41 points uniformly over a line, mapped onto a diamond.
+	// The ring size 17*17 = 289 is close to a multiple of 41 (41*7 = 287)
+
+	  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+	  vec3 h = abs(x) - 0.5;
+	  vec3 ox = floor(x + 0.5);
+	  vec3 a0 = x - ox;
+
+	// Normalise gradients implicitly by scaling m
+	// Approximation of: m *= inversesqrt( a0*a0 + h*h );
+	  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+
+	// Compute final noise value at P
+	  vec3 g;
+	  g.x  = a0.x  * x0.x  + h.x  * x0.y;
+	  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+	  return 130.0 * dot(m, g);
+	}
+
+	// Music visualizer vertex-displacement shader
+	// Anwar Ali-Ahmad
+	// Copyright (c) 2016 Anwar Ali-Ahmad. All rights reserved.
+
+	varying vec2 vUv;
+	varying float d;
+	uniform float time;
+	uniform float frequency[512];
+	uniform float mDb;
+
+	// Length from center at position
+	float radius(vec3 p) {
+		return sqrt(p.x*p.x + p.x*p.x);
+	}
+
+	// Adjusting for minimum decibel values given by FFT
+	float LinearToDecibel(float linear)
+	{
+		return linear-mDb;
+	}
+
+	void main() {
+		vUv = uv;
+		float r = radius(position);
+		float n = snoise(vec2(position.xy));
+
+		d = 4.*snoise(vec2(position.xy)) * r/300.;
+		d = - d*d;
+		d += LinearToDecibel(frequency[int(radius(position))]);
+		d += d/15.;
+		vec3 newposition = position + normal * d ;
+		gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);
+	}
+</script>
+
+<script id="abyss-fragment" type="x-shader/x-fragment">
+	varying vec2 vUv;
+	uniform float time;
+	uniform float frequency[512];
+	/*
+	uniform float mDb;
+
+	float LinearToDecibel(float linear)
+	{
+		return linear-mDb;
+	}
+
+	float radius(vec2 u) {
+		float x = u.x-.5;
+		float y = u.y-.5;
+		return sqrt(x*x + y*y);
+	}
+
+	// To work around GLSL compiler sometimes not accessing arrays properly
+	float getData(int id) {
+    for (int i=0; i< 512; i++) {
+        if (i == id) return frequency[i];
+    }
+	}*/
+	void main() {;
+		// Making the color a red scale with respect to vertex displacement
+	  gl_FragColor = vec4(.5, .0, .0, 1.0);
+
+	}
+</script>
+
+<script id="wave-vertex" type="x-shader/x-vertex">
+	varying vec2 vUv;
+	varying float d;// displacement
+	uniform float time;
+
+	float radius(vec3 p) {
+		return sqrt(p.x*p.x + p.x*p.x);
+	}
+
+	void main() {
+	    vUv = uv;
+	   	d =	50.*cos(2.*3.14*radius(position)/180.+5.*time);
+
+	   	vec3 newposition = position - normal*d;
+	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
+
+	}
+</script>
+
+<script id="wave-fragment" type="x-shader/x-fragment">
+	varying vec2 vUv;
+	uniform float time;
+	uniform float frequency[512];
+	/*
+	uniform float mDb;
+
+	float LinearToDecibel(float linear)
+	{
+		return linear-mDb;
+	}
+
+	float radius(vec2 u) {
+		float x = u.x-.5;
+		float y = u.y-.5;
+		return sqrt(x*x + y*y);
+	}
+
+	// To work around GLSL compiler sometimes not accessing arrays properly
+	float getData(int id) {
+    for (int i=0; i< 512; i++) {
+        if (i == id) return frequency[i];
+    }
+	}*/
+	void main() {;
+		// Making the color a red scale with respect to vertex displacement
+	  gl_FragColor = vec4(vec3(0.0), 1.0);
+
+	}
+</script>
+
+<script id="heart-vertex" type="x-shader/x-vertex">
+	varying vec2 vUv;
+	varying float disp;// displacement
+	uniform float time;
+	uniform float frequency[512]; // FFT decibel data
+	uniform float minDecibels;
+
+	// How far is coordinate from origin
+	float radius(vec3 p) {
+		return sqrt(p.x*p.x+p.y*p.y);
+	}
+
+	// Adjusting for minimum decibel values given by WebAudio API's FFT
+	float LinearToDecibel(float linear)
+	{
+		return linear-minDecibels;
+	}
+
+	void main() {
+	    vUv = uv;
+
+			// Displacement is a function of the FFT frequencies
+			// provided by the Web Audio API's AudioNode analyser
+	    disp = LinearToDecibel(frequency[int(radius(position))]);
+
+	   	vec3 newposition = position + normal*disp*disp/15.;
+	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
+
+	}
+
+</script>
+
+<script id="heart-fragment" type="x-shader/x-fragment">
+	varying vec2 vUv;
+	varying float disp;
+	uniform float time;
+
+	void main() {
+	    gl_FragColor = vec4(vec3(0.0), 1.0);
+	}
+</script>
+
+
+<script id="cube-heart-fragment" type="x-shader/x-fragment">
+	varying vec2 vUv;
+	uniform float time;
+
+	void main() {
+	    gl_FragColor = vec4(vec3(0.0), 1.0 )*sin(time*3.14*2.);
+
+	}
+</script>
