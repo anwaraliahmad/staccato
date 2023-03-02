@@ -1,4 +1,5 @@
 const path = require('path');
+const buildDir = path.resolve(__dirname, 'dist');
 
 module.exports = {
   entry: './src/index.ts',
@@ -11,18 +12,12 @@ module.exports = {
       },
     ],
   },
-  mode: "development",
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
   },
   output: {
+    publicPath: 'auto',
     filename: 'bundle.js',
-    path: path.resolve(__dirname, 'dist'),
-  },
-  devServer: {
-    static: {
-        directory: path.join(__dirname, 'dist'),
-      }
-    ,
+    path: buildDir,
   }
 };
