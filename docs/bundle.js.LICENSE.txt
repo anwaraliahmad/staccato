@@ -1,1 +1,5 @@
-/*! For license information please see bundle.js.LICENSE.txt */
+/**
+ * @license
+ * Copyright 2010-2023 Three.js Authors
+ * SPDX-License-Identifier: MIT
+ */

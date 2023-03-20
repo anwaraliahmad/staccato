@@ -5,18 +5,15 @@ import ShaderUtil from './shaderUtil';
 import { Constants } from './constants'
 
 export default class Staccato {
-    private ctx: globalThis.AudioContext;
-    private analyser: AnalyserNode;
-    private source;
-    private waveData: Float32Array | number[];
-      
-
-    private scene: THREE.Scene;
-    private camera: THREE.Camera;
-    private mouse = {x: 0, y: 0};
-    private shaderTypes = ['heart', 'wave', 'abyss'];
-    private shaders: Shaders;
-    private uniforms = {
+    ctx: globalThis.AudioContext;
+    analyser: AnalyserNode;
+    source;
+    waveData: Float32Array | number[];
+    scene: THREE.Scene;
+    camera: THREE.Camera;
+    shaderTypes = ['heart', 'wave', 'abyss'];
+    shaders: Shaders;
+    uniforms = {
       time: { // Elapsed time 
         type: "f",
         value: 0.0
@@ -31,10 +28,11 @@ export default class Staccato {
       }
     };
 
-    private objectMat = [];
-    private shapes = [];
+    objectMat = [];
+    shapes = [];
+    currentShape: THREE.Mesh;
 
-    private fileDrop: Element;
+    fileDrop: Element;
 
 
 
@@ -94,13 +92,6 @@ export default class Staccato {
       this.fileDrop = document.getElementById("file-drop");
       this.fileDrop.addEventListener('dragover', this.fileDragHover.bind(this), false);
       this.fileDrop.addEventListener('drop', this.fileHandler.bind(this), false);
-
-      // Track mouse movement for scene / object orientation
-      document.addEventListener("mousemove", (e) => {
-        e.preventDefault();
-        this.mouse.x = (e.clientX / globalThis.innerWidth ) - .5;
-        this.mouse.y = (e.clientY / globalThis.innerHeight) - .5;
-      });
     }
 
 
@@ -191,6 +182,7 @@ export default class Staccato {
       if (shape == "plane")  
         m.rotation.x += Math.PI/2;
       this.shapes.push(m);
+      this.currentShape = m;
       this.scene.add(m);
     }
 
@@ -263,9 +255,5 @@ export default class Staccato {
         this.shapes[i].material.uniforms['frequency'].value = this.waveData; 
         this.shapes[i].material.uniforms['time'].value += delta;
       }
-
-      this.camera.position.x += (this.mouse.x*4000- this.camera.position.x) * (delta*3)
-      this.camera.position.y += (this.mouse.y*4000 -this.camera.position.y) * (delta*3)
-      this.camera.lookAt( this.scene.position ); 
     }
 }

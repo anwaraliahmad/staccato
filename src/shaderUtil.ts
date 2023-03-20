@@ -1,6 +1,8 @@
 // Utilities for shaderwork
-// Copyright (c) 2017-2018 Anwar Ali-Ahmad
+// Copyright (c) 2017-2023 Anwar Ali-Ahmad
 // Licensed under MIT
+// TODO: Cleanup, tweaking for visuals
+//      (Possibly rewrite entirely as Wasm module)
 
 enum ShaderFunctions {
   getFreqData,
@@ -42,7 +44,7 @@ export default class ShaderUtil {
         --n;
       }
       for (let i = 0; i < n + 1; i++) {
-        const ff = Math.floor(Math.random() * 3) + 1;
+        const ff = Math.floor(Math.random() * 2) + 1;
         let t = ShaderFunctions[ff];
         return `${(Math.random() * 12.0 * (1 / (n + 1)))}*${t}(${_dFunct(n)})`;
       }
@@ -75,7 +77,7 @@ export default class ShaderUtil {
     let shaderFunct: string; // The string holding shader function
     for (let i: number = 0; i <= count; i++) {
       // Randomly select next shader function type
-      const ff: number = Math.floor(Math.random() * 3);
+      const ff: number = Math.floor(Math.random() * 3)+1;
       let functType: string = ShaderFunctions[ff];
       // Random number to scale fragment return intensity
       const randomScale: number =  Math.random() * 12.0

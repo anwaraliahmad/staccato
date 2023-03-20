@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+/*
+ * Represents data for a single shader (vert/frag, DOM)
+ */
 class Shader {
   public static DEFAULT_UNIFORMS: {} = {
     "time": 0.0
@@ -30,6 +33,7 @@ class Shader {
   }
 }
 
+// Container for additional shaders
 class Shaders extends Array<Shader> {
   readonly DOM_ID = 'shaders';
   element: Element = document.getElementById(this.DOM_ID);

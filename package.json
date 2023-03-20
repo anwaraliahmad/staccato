@@ -5,7 +5,7 @@
   "main": "script.js",
   "scripts": {
     "gh-build": "webpack --config webpack.prod.js",
-    "server": "webpack --config webpack.dev.js"
+    "server": "webpack server --config webpack.dev.js --host=0.0.0.0"
   },
   "repository": {
     "type": "git",

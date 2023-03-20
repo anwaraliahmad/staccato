@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { OrbitControls } from './addons/OrbitControls.js';
+import { DeviceOrientationControls } from './addons/DeviceOrientation.js';
 import * as Stats from 'stats.js';
 import Staccato from './staccato';
 
@@ -15,6 +17,10 @@ export default class Main {
 	scene: THREE.Scene;
 	renderer: THREE.WebGLRenderer;
 	camera: THREE.Camera;
+	controls: OrbitControls;
+	orientation: DeviceOrientationControls;
+	
+
 
 	// Scene lighting and objects
 	ambientLight: THREE.AmbientLight;
@@ -40,6 +46,15 @@ export default class Main {
 		this.camera  = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 20000);
 		this.camera.position.z = 1000;
 		this.camera.position.y = 0;
+
+		// Orbit controls for camera
+		this.controls = new OrbitControls( this.camera, this.renderer.domElement );
+		this.controls.autoRotate = true;
+		this.controls.enableDamping = true;
+
+		// Device Orientation
+		this.orientation = new DeviceOrientationControls(this.camera);
+		this.orientation.connect();
 
         // Implant renderer into DOM
 		try {
@@ -101,10 +116,12 @@ export default class Main {
 
 	update() {
         this.stats.begin();
+		requestAnimationFrame(this.update.bind(this)); // keep looping
+		//this.controls.update();
+		this.orientation.update();
 		this.visualizer.update(this.clock.getDelta());
 		this.renderer.render(this.scene, this.camera); // render frame
-        this.stats.end();
-		requestAnimationFrame(this.update.bind(this)); // keep looping
+		this.stats.end();
 	}
 
 }
