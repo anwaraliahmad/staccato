@@ -54,6 +54,7 @@ export default class Main {
 
 		// Device Orientation
 		this.orientation = new DeviceOrientationControls(this.camera);
+		this.orientation.initialOffset = 0;
 		this.orientation.connect();
 
         // Implant renderer into DOM
@@ -117,8 +118,9 @@ export default class Main {
 	update() {
         this.stats.begin();
 		requestAnimationFrame(this.update.bind(this)); // keep looping
-		//this.controls.update();
-		this.orientation.update();
+		this.controls.update();
+		//this.orientation.update();
+		//console.log(this.orientation.deviceOrientation)
 		this.visualizer.update(this.clock.getDelta());
 		this.renderer.render(this.scene, this.camera); // render frame
 		this.stats.end();

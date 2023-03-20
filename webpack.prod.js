@@ -5,6 +5,7 @@ const CopyPlugin = require("copy-webpack-plugin");
 const buildDir = path.resolve(__dirname, 'docs');
 
 module.exports = merge(common, {
+  mode: 'production',
   plugins: [
     new CopyPlugin({
       patterns: [
