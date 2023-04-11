@@ -9,11 +9,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://cptsouma@bitbucket.org/cptsouma/staccato.git"
+    "url": "git+https://github.com/anwaraliahmad/staccato.git"
   },
   "author": "Anwar Ali-Ahmad <@anwaraliahmad>",
   "license": "MIT",
-  "homepage": "https://bitbucket.org/cptsouma/staccato#readme",
+  "homepage": "https://github.com/anwaraliahmad/staccato#readme",
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.49.0",
     "@typescript-eslint/parser": "^5.49.0",

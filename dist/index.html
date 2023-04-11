@@ -171,7 +171,7 @@
 	varying vec2 vUv;
 	uniform float time;
 	uniform float frequency[512];
-	/*
+
 	uniform float mDb;
 
 	float LinearToDecibel(float linear)
@@ -179,21 +179,19 @@
 		return linear-mDb;
 	}
 
-	float radius(vec2 u) {
+	int radius(vec2 u) {
 		float x = u.x-.5;
 		float y = u.y-.5;
-		return sqrt(x*x + y*y);
+		return int(sqrt(x*x + y*y));
 	}
 
-	// To work around GLSL compiler sometimes not accessing arrays properly
-	float getData(int id) {
-    for (int i=0; i< 512; i++) {
-        if (i == id) return frequency[i];
-    }
-	}*/
+
 	void main() {;
+	  float mValue = LinearToDecibel(frequency[int(vUv.x*250.)])+.1;
+	  float mValueY = LinearToDecibel(frequency[int(vUv.y*250.)])+.1;
+
 		// Making the color a red scale with respect to vertex displacement
-	  gl_FragColor = vec4(.5, .0, .0, 1.0);
+	  gl_FragColor = vec4(mValue, mValueY, mValueY, 1.0);
 
 	}
 </script>
@@ -273,7 +271,7 @@
 			// provided by the Web Audio API's AudioNode analyser
 	    disp = LinearToDecibel(frequency[int(radius(position))]);
 
-	   	vec3 newposition = position + normal*disp*disp/15.;
+	   	vec3 newposition = position + normal*pow(disp, 3.)/250.;
 	   	gl_Position = projectionMatrix * modelViewMatrix * vec4( newposition, 1.0 );
 
 	}
@@ -284,9 +282,21 @@
 	varying vec2 vUv;
 	varying float disp;
 	uniform float time;
+	uniform float frequency[512]; // FFT decibel data
+	uniform float minDecibels;
+
+	
+	// Adjusting for minimum decibel values given by WebAudio API's FFT
+	float LinearToDecibel(float linear)
+	{
+		return linear-minDecibels;
+	}
 
 	void main() {
-	    gl_FragColor = vec4(vec3(0.0), 1.0);
+		float mColorX = LinearToDecibel(frequency[int(vUv.x)]);
+		float mColorY = LinearToDecibel(frequency[int(vUv.y)]);
+
+	    gl_FragColor = vec4(mColorX, mColorY, mColorX, 1.0);
 	}
 </script>
 
