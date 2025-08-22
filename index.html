@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staccato - Modern WebGL Music Visualizer</title>
+  <meta name="description" content="Advanced WebGL music visualizer with procedural shaders and real-time audio analysis" />
+  
+  <!-- Modern fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  
+  <!-- Theme color -->
+  <meta name="theme-color" content="#0f0f23" />
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="Staccato - Modern WebGL Music Visualizer" />
+  <meta property="og:description" content="Advanced WebGL music visualizer with procedural shaders and real-time audio analysis" />
+  <meta property="og:type" content="website" />
+  
+  <style>
+    /* Critical CSS for immediate loading */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+      color: #ffffff;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+    
+    #app {
+      height: 100vh;
+      width: 100vw;
+      position: relative;
+    }
+    
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 1000;
+    }
+    
+    .loading h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .loading p {
+      font-size: 1.1rem;
+      opacity: 0.8;
+      margin-bottom: 2rem;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="loading">
+      <h1>Staccato</h1>
+      <p>Loading modern WebGL music visualizer...</p>
+      <div class="spinner"></div>
+    </div>
+  </div>
+  
+  <!-- Shader templates -->
+  <template id="shader-templates">
+    <!-- Legacy shaders preserved for compatibility -->
+    <script type="application/x-glsl" id="abyss-vertex">
+      // ... existing code ...
+    </script>
+    
+    <script type="application/x-glsl" id="abyss-fragment">
+      // ... existing code ...
+    </script>
+    
+    <script type="application/x-glsl" id="wave-vertex">
+      // ... existing code ...
+    </script>
+    
+    <script type="application/x-glsl" id="wave-fragment">
+      // ... existing code ...
+    </script>
+    
+    <script type="application/x-glsl" id="heart-vertex">
+      // ... existing code ...
+    </script>
+    
+    <script type="application/x-glsl" id="heart-fragment">
+      // ... existing code ...
+    </script>
+  </template>
+  
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
