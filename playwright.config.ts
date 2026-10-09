@@ -2,7 +2,9 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 90_000,
+  timeout: 120_000,
+  // Software WebGL compiles three programs per shader edit; give it room.
+  expect: { timeout: 20_000 },
   use: {
     baseURL: 'http://localhost:4173/',
     viewport: { width: 1280, height: 760 },

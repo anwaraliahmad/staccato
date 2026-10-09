@@ -13,11 +13,14 @@ import { BUILTIN, type ShaderSource } from './shaders';
 import { Editor } from './ui/editor';
 
 // The November 2016 scene: a heart between a wave and an abyss.
-// Now the heart is liquid chrome under a fine wire, and the planes glow.
-const SHAPES: (ShapeDef & { shader: string; style: Style })[] = [
-  { name: 'sphere', kind: 'sphere', size: 300, segments: [128, 128], position: [0, 0, 0], rotX: 0, lineWidth: 0.9, shader: 'heart', style: 'both' },
-  { name: 'ceiling', kind: 'plane', size: 3000, segments: [32, 32], position: [0, 1200, 0], rotX: Math.PI / 2, lineWidth: 1.6, shader: 'wave', style: 'wire' },
-  { name: 'floor', kind: 'plane', size: 3000, segments: [32, 32], position: [0, -1200, 0], rotX: Math.PI / 2, lineWidth: 1.6, shader: 'abyss', style: 'wire' },
+// The ceiling is twice its 2016 size at the same mesh density, so the space
+// opens out toward the horizon. The floor keeps its size: toward its edges the
+// abyss's -(noise·r/300)² term, growing with distance, throws up the jagged
+// ridges of the original concept, and the ocean carries on past them.
+const SHAPES: (ShapeDef & { shader: string })[] = [
+  { name: 'sphere', kind: 'sphere', size: 300, segments: [128, 128], position: [0, 0, 0], rotX: 0, lineWidth: 0.9, shader: 'heart' },
+  { name: 'ceiling', kind: 'plane', size: 6000, segments: [64, 64], position: [0, 1200, 0], rotX: Math.PI / 2, lineWidth: 1.6, shader: 'wave' },
+  { name: 'floor', kind: 'plane', size: 3000, segments: [32, 32], position: [0, -1200, 0], rotX: Math.PI / 2, lineWidth: 1.6, shader: 'abyss' },
 ];
 
 const PAPERS = LOOKS;
@@ -41,7 +44,7 @@ export class Staccato {
   readonly library = new Map<string, Entry>();
   readonly assignment = new Map<string, string>();
   selected = 'sphere';
-  paper: Paper = '16';
+  paper: Paper = 'origin';
   time = 0;
 
   private readonly canvas = $<HTMLCanvasElement>('stage');
@@ -67,10 +70,8 @@ export class Staccato {
 
     for (const source of BUILTIN) this.addToLibrary(source, false);
     this.restoreEdits();
-    for (const shape of SHAPES) {
-      this.assignment.set(shape.name, shape.shader);
-      this.renderer.setStyle(shape.name, shape.style);
-    }
+    for (const shape of SHAPES) this.assignment.set(shape.name, shape.shader);
+    this.applyLook('origin');
     this.readHash();
     for (const [shape, id] of this.assignment) {
       if (!this.assign(shape, id)) this.assign(shape, SHAPES.find((s) => s.name === shape)!.shader);
@@ -280,12 +281,12 @@ export class Staccato {
       const id = params.get(shape.name);
       if (id) this.assignment.set(shape.name, id);
     }
+    const paper = params.get('paper');
+    if (paper && paper in PAPERS) this.applyLook(paper as Paper);
     for (const shape of SHAPES) {
       const style = params.get(`${shape.name}Style`);
       if (style && (STYLES as string[]).includes(style)) this.renderer.setStyle(shape.name, style as Style);
     }
-    const paper = params.get('paper');
-    if (paper && paper in PAPERS) this.setPaper(paper as Paper);
     const scale = params.get('scale');
     if (scale === 'linear' || scale === 'log') this.audio.scale = scale;
   }
@@ -295,20 +296,27 @@ export class Staccato {
     for (const [shape, id] of this.assignment) params.set(shape, id);
     for (const shape of SHAPES) {
       const style = this.renderer.style(shape.name);
-      if (style !== shape.style) params.set(`${shape.name}Style`, style);
+      if (style !== PAPERS[this.paper].styles[shape.name]) params.set(`${shape.name}Style`, style);
     }
-    if (this.paper !== '16') params.set('paper', this.paper);
+    if (this.paper !== 'origin') params.set('paper', this.paper);
     if (this.audio.scale !== 'log') params.set('scale', this.audio.scale);
     history.replaceState(null, '', `#${params}`);
   }
 
   // ——— view ———
 
+  /** Change the look; shapes take its default styles. */
   setPaper(paper: Paper): void {
+    this.applyLook(paper);
+    this.writeHash();
+  }
+
+  private applyLook(paper: Paper): void {
     this.paper = paper;
     this.renderer.look = PAPERS[paper];
+    for (const shape of SHAPES) this.renderer.setStyle(shape.name, PAPERS[paper].styles[shape.name] ?? 'wire');
+    this.renderLists();
     document.documentElement.style.setProperty('--paper', cssColor(PAPERS[paper].skyHorizon));
-    this.writeHash();
   }
 
   setScale(scale: Scale): void {
@@ -318,6 +326,17 @@ export class Staccato {
   }
 
   private renderLists(): void {
+    const shaderId = this.assignment.get(this.selected) ?? '';
+    const entry = this.library.get(shaderId);
+    this.renderer.hudInfo = {
+      look: this.paper,
+      shape: this.selected,
+      shader: shaderId,
+      source: entry ? `${entry.vertex}\n${entry.fragment}` : '',
+      sampleRate: this.audio?.ctx.sampleRate ?? 48000,
+      fftSize: 2048,
+    };
+
     const shapes = $<HTMLElement>('shapes').querySelector('ul')!;
     shapes.replaceChildren(
       ...SHAPES.map((shape) => {

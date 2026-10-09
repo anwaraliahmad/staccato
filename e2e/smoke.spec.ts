@@ -17,7 +17,8 @@ declare global {
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on('console', (m) => {
-    if (m.type() === 'error') errors.push(m.text());
+    // Chrome reports WebGL misuse (GL_INVALID_*, feedback loops) as warnings.
+    if (m.type() === 'error' || /WebGL|GL_INVALID|GL ERROR/i.test(m.text())) errors.push(m.text());
   });
   page.on('pageerror', (e) => errors.push(e.message));
   return errors;
@@ -79,4 +80,17 @@ test('the editor recompiles live and reports errors on the author\'s line', asyn
   await expect(page.locator('#editor-errors')).toContainText('fragment:2');
   await fragment.fill('void main() {\n  gl_FragColor = vec4(1.0, 0.0, 0.5, 1.0);\n}\n');
   await expect(page.locator('#editor-errors')).toBeEmpty();
+});
+
+test('every look renders every style without errors', async ({ page }) => {
+  const errors = collectErrors(page);
+  for (const look of ['origin', 'pavilion', 'metal', '16', 'night']) {
+    for (const style of ['wire', 'chrome', 'chromewire', 'glass', 'glasswire']) {
+      await page.goto(`/#paper=${look}&sphereStyle=${style}`);
+      await page.waitForFunction(() => !!window.staccato);
+      // Two frames: one to compile, one to draw.
+      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    }
+  }
+  expect(errors).toEqual([]);
 });

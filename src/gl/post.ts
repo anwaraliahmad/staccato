@@ -57,14 +57,28 @@ void main() {
 
 const COMPOSITE = `#version 300 es
 precision highp float;
-uniform sampler2D scene;
+uniform sampler2D scene;      // mipmapped
 uniform sampler2D bloom;
+uniform sampler2D hud;
 uniform float bloomStrength;
 uniform float aberration;
 uniform float vignette;
 uniform float grain;
+uniform float dream;          // soft focus toward the edges, like something half remembered
+uniform float halation;       // a broad glow of the whole frame
+uniform vec3 halationTint;
+uniform float saturation;
+uniform float contrast;
+uniform vec3 lift;
+uniform float duotone;
+uniform vec3 shadowTint;
+uniform vec3 highlightTint;
+uniform float hudAmount;
+uniform vec4 meters;          // bass, mid, treble, level
+uniform float onsetMeter;
 uniform float seed;
 uniform vec2 resolution;
+uniform float pixelRatio;
 in vec2 vUv;
 out vec4 color;
 
@@ -80,6 +94,23 @@ vec3 shoulder(vec3 c) {
   return min(c, 0.8) + 0.2 * (1.0 - exp(-over / 0.2));
 }
 
+// Five dots, bottom right: filled when a band is loud — the HUD's one live readout.
+float meterDots(vec2 px) {
+  vec2 origin = vec2(resolution.x - 40.0 * pixelRatio, 46.0 * pixelRatio);
+  float ink = 0.0;
+  float values[5] = float[5](meters.x, meters.y, meters.z, meters.w, onsetMeter);
+  for (int i = 0; i < 5; i++) {
+    vec2 c = origin + vec2(0.0, float(4 - i) * 18.0 * pixelRatio);
+    float r = 5.5 * pixelRatio;
+    float d = length(px - c);
+    float on = smoothstep(0.32, 0.42, values[i]);
+    float disc = smoothstep(r + 0.75, r - 0.75, d);
+    float ring = smoothstep(0.9 * pixelRatio, 0.0, abs(d - r));
+    ink = max(ink, mix(ring, disc, on));
+  }
+  return ink;
+}
+
 void main() {
   vec2 d = vUv - 0.5;
   vec2 shift = d * aberration;
@@ -88,9 +119,25 @@ void main() {
     texture(scene, vUv).g,
     texture(scene, vUv + shift).b
   );
+  float edge = smoothstep(0.2, 0.75, length(d * vec2(resolution.x / resolution.y, 1.0)));
+  c = mix(c, textureLod(scene, vUv, 3.5).rgb, dream * edge);
+  c += textureLod(scene, vUv, 6.0).rgb * halationTint * halation;
   c += texture(bloom, vUv).rgb * bloomStrength;
-  c = shoulder(c);
+
+  float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  c = mix(vec3(lum), c, saturation);
+  vec3 duo = mix(shadowTint, highlightTint, smoothstep(0.0, 1.0, lum));
+  c = mix(c, duo * (0.6 + 0.4 * lum), duotone);
+  c = (c - 0.5) * contrast + 0.5;
+  c = lift + c * (1.0 - lift);
+  c = shoulder(max(c, 0.0));
   c *= mix(1.0, smoothstep(0.95, 0.25, length(d * vec2(resolution.x / resolution.y, 1.0))), vignette);
+
+  // HUD: screen-blended so it reads on light and dark alike.
+  vec4 h = texture(hud, vUv);
+  float ink = max(h.a, meterDots(gl_FragCoord.xy)) * hudAmount;
+  c = mix(c, 1.0 - (1.0 - c) * (1.0 - vec3(0.92, 0.96, 1.0)), ink);
+
   float n = hash(gl_FragCoord.xy + seed) + hash(gl_FragCoord.xy * 1.7 - seed) - 1.0;
   c += n * grain + n / 255.0;
   color = vec4(c, 1.0);
@@ -102,6 +149,19 @@ export interface CompositeParams {
   aberration: number;
   vignette: number;
   grain: number;
+  dream: number;
+  halation: number;
+  halationTint: Float32Array;
+  saturation: number;
+  contrast: number;
+  lift: Float32Array;
+  duotone: number;
+  shadowTint: Float32Array;
+  highlightTint: Float32Array;
+  hudAmount: number;
+  meters: Float32Array;
+  onsetMeter: number;
+  pixelRatio: number;
 }
 
 interface Target {
@@ -158,9 +218,11 @@ export class Post {
     };
     storage(gl.RGBA16F, gl.COLOR_ATTACHMENT0);
     storage(gl.RGBA16F, gl.COLOR_ATTACHMENT1);
-    storage(gl.DEPTH_COMPONENT24, gl.DEPTH_ATTACHMENT);
+    storage(gl.DEPTH24_STENCIL8, gl.DEPTH_STENCIL_ATTACHMENT);
 
-    this.resolved = [this.target(width, height), this.target(width, height)];
+    // The color resolve keeps a mip chain: glass blurs what's behind it with it,
+    // and the composite softens the edges of the frame.
+    this.resolved = [this.target(width, height, true), this.target(width, height)];
     let w = width, h = height;
     for (let i = 0; i < BLOOM_LEVELS && w > 8 && h > 8; i++) {
       w = Math.max(1, w >> 1);
@@ -178,7 +240,7 @@ export class Post {
     gl.viewport(0, 0, this.width, this.height);
     gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 1]);
     gl.clearBufferfv(gl.COLOR, 1, [0, 0, 0, 0]);
-    gl.clearBufferfv(gl.DEPTH, 0, [1]);
+    gl.clearBufferfi(gl.DEPTH_STENCIL, 0, 1, 0);
   }
 
   /** Write only the color attachment (for shaders without a glow output). */
@@ -187,21 +249,42 @@ export class Post {
     gl.drawBuffers(only ? [gl.COLOR_ATTACHMENT0, gl.NONE] : [gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
   }
 
+  /** Copy the frame so far into a mipmapped texture (for glass), then carry on drawing. */
+  snapshot(): WebGLTexture {
+    const gl = this.gl;
+    this.resolveColor();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.msaa);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+    gl.viewport(0, 0, this.width, this.height);
+    return this.resolved[0]!.texture;
+  }
+
+  private resolveColor(): void {
+    const gl = this.gl;
+    const target = this.resolved[0]!;
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.msaa);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, target.fbo);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+    gl.blitFramebuffer(0, 0, this.width, this.height, 0, 0, this.width, this.height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    gl.bindTexture(gl.TEXTURE_2D, target.texture);
+    gl.generateMipmap(gl.TEXTURE_2D);
+  }
+
   /** Resolve, bloom and composite onto the canvas. */
-  finish(params: CompositeParams): void {
+  finish(params: CompositeParams, hud: WebGLTexture): void {
     const gl = this.gl;
     gl.disable(gl.DEPTH_TEST);
     gl.depthMask(true);
     gl.bindVertexArray(this.empty);
 
-    // Resolve each attachment of the multisampled target.
+    // Resolve both attachments of the multisampled target.
+    this.resolveColor();
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.msaa);
-    this.resolved.forEach((t, i) => {
-      gl.readBuffer(gl.COLOR_ATTACHMENT0 + i);
-      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, t.fbo);
-      gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
-      gl.blitFramebuffer(0, 0, this.width, this.height, 0, 0, this.width, this.height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
-    });
+    gl.readBuffer(gl.COLOR_ATTACHMENT1);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.resolved[1]!.fbo);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+    gl.blitFramebuffer(0, 0, this.width, this.height, 0, 0, this.width, this.height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
 
     // Bloom: down the chain, then back up adding each level onto the one above.
     gl.disable(gl.BLEND);
@@ -223,6 +306,7 @@ export class Post {
     this.composite.set({
       scene: this.resolved[0]!.texture,
       bloom: (this.levels[0] ?? this.resolved[1]!).texture,
+      hud,
       resolution: new Float32Array([this.width, this.height]),
       seed: Math.random() * 100,
       ...params,
@@ -238,12 +322,13 @@ export class Post {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  private target(width: number, height: number): Target {
+  private target(width: number, height: number, mipmapped = false): Target {
     const gl = this.gl;
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA16F, width, height);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    const levels = mipmapped ? Math.floor(Math.log2(Math.max(width, height))) + 1 : 1;
+    gl.texStorage2D(gl.TEXTURE_2D, levels, gl.RGBA16F, width, height);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mipmapped ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);

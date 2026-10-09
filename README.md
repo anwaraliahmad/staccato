@@ -1,6 +1,6 @@
 # Staccato
 
-![Staccato: a chrome heart between a wave and an abyss, on 2016 lavender](media/staccato-16.jpg)
+![Staccato, origin: white wires over the sea at dusk, the heart a glass bubble](media/origin.jpg)
 
 A WebGL music visualizer. Since 2016.
 
@@ -23,17 +23,25 @@ Drop a song anywhere on the page. Or listen to the **mic**, to another browser *
 | `space` | play / pause |
 | `o` `m` `t` `d` | file, microphone, tab audio, demo |
 | `s` / `1`–`9` | select a shape / give it a shader |
-| `c` | wire, chrome, or both |
+| `c` | wire, chrome, chrome + wire, glass, glass + wire |
 | `g` | generate a new shader |
 | `e` | edit the selected shape's GLSL, live |
-| `b` | paper: 2016 lavender, 2017 white, night |
+| `b` | look: origin, pavilion, metal, '16, night |
 | `l` | frequency scale: log, or linear as in 2016 |
 | `r` | record a clip (video + audio) |
 | `h` / `f` | hide the interface / fullscreen |
 
 The URL always describes the scene (`#sphere=heart&ceiling=echo&floor=sn-3fa9c&paper=night`), so sharing a link shares the scene, generated shaders included.
 
-![Night](media/staccato-night.jpg)
+## Looks
+
+One world (a sky, a sun, water, the three shapes), remembered five ways. Press `b`.
+
+| | |
+|---|---|
+| ![origin](media/origin.jpg) **origin.** The picture Staccato began as: white wires over the sea at dusk. The heart is the one new thing in an old memory, a glass bubble. | ![pavilion](media/pavilion.jpg) **pavilion.** Glass architecture on a still morning: open blue, frosted panes, a mirror pool, pale steel. |
+| ![metal](media/metal.jpg) **metal.** Cold steel: a spiked chrome heart in a blue studio, read out like an instrument. The HUD shows the live GLSL and band meters. | ![night](media/night.jpg) **night.** Black chrome over black water, neon horizon. |
+| ![16](media/16.jpg) **'16.** The 2016 lavender and the shaders' own hot colours. | |
 
 ## Writing shaders
 
@@ -62,8 +70,9 @@ There's no engine: just TypeScript, WebGL2 and GLSL, with no runtime dependencie
 - **Audio.** Sources feed an `AnalyserNode` (2048-point FFT, smoothed), which drives the shaders. A second, unsmoothed analyser feeds a spectral-flux onset detector. The spectrum is uploaded as a 512×1 float texture each frame, and a 512×128 ring buffer of recent spectra backs `echo()`.
 - **Capture.** Each frame, every shape's vertex shader runs once per vertex as a point drawn into float textures: clip position in one, packed varyings in the rest, laid out like the mesh grid.
 - **Wires.** Each edge is drawn as a screen-space quad of any width with analytic anti-aliasing, reading its endpoints from the capture. Your fragment shader colors it, unmodified.
-- **Chrome.** Normals are rebuilt from each vertex's displaced grid neighbours, then shaded as iridescent thin-film metal reflecting a procedural studio. The studio's softboxes pulse with the bass and its ring light flares on onsets.
-- **Post.** The scene renders into a 4× multisampled HDR target with a separate glow buffer. Then: dual-filter bloom, chromatic aberration that kicks on note attacks, a highlight shoulder, vignette, and dithered grain.
+- **World.** A procedural sky with a sun and horizon haze, softbox studio lights that pulse with the bass, and an ocean raytraced per pixel: filtered travelling waves, Fresnel reflection, sun glitter, and real depth, so ridges stand in the water. Wires and surfaces fade into distance fog.
+- **Chrome and glass.** Normals are rebuilt from each vertex's displaced grid neighbours. Chrome is thin-film iridescent metal reflecting the world. Glass refracts a mipmapped snapshot of the frame behind it, frosted and split by wavelength, and a stencil pass keeps wires in front of it on top.
+- **Post.** The scene renders into a 4× multisampled HDR target with a separate glow buffer. Then: dual-filter bloom, chromatic aberration that kicks on note attacks, per-look grading (duotone, lift, contrast, halation, soft focus toward the edges), a highlight shoulder, vignette, the HUD, and dithered grain.
 
 Devices without float render targets fall back to plain `gl.LINES` (the 2016 look) without post-processing.
 
@@ -85,6 +94,6 @@ Pushes to `master` deploy to GitHub Pages through `.github/workflows/ci.yml`. In
 - **Nov 2016:** the heart, drag and drop, the mouse-following camera. The scene in the screenshot above.
 - **Dec 2016 – Mar 2017:** the shader sidebar and a procedural shader generator.
 - **2021 – 2023:** TypeScript, webpack, three r149, OrbitControls, GitHub Pages.
-- **2026:** hand-written WebGL2, anti-aliased wires, chrome, bloom, onsets, mic and tab capture, a live editor, seeded generator, recording.
+- **2026:** hand-written WebGL2, anti-aliased wires, chrome and glass, the ocean from the original concept, five looks, onsets, mic and tab capture, a live editor, seeded generator, recording.
 
 MIT © Anwar Ali-Ahmad
