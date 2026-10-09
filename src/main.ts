@@ -1,34 +1,26 @@
 // Staccato — WebGL music visualizer using shaders and FFT audio data.
 // Copyright (c) 2016–2026 Anwar Ali-Ahmad. MIT License.
 
-import { AudioEngine, type SourceKind } from './audio/engine';
+import { AudioEngine, FFT_SIZE } from './audio/engine';
 import type { Scale } from './audio/spectrum';
 import { CameraRig } from './camera';
 import { generate, randomSeed, seedFromId } from './generate/generator';
+import { GEOMETRIES, type GeometryName } from './gl/geometry';
 import type { CompileError } from './gl/glsl';
 import { ShaderCompileError } from './gl/program';
-import { LOOKS, NoWebGL2Error, Renderer, STYLES, type LookName, type ShapeDef, type Style } from './gl/renderer';
+import { NoWebGL2Error, Renderer, STYLES, type Style } from './gl/renderer';
 import { Recorder, download } from './recorder';
+import { SCENES, sceneById, type Scene } from './scenes';
 import { BUILTIN, type ShaderSource } from './shaders';
 import { Editor } from './ui/editor';
 
-// The November 2016 scene: a heart between a wave and an abyss.
-// The ceiling is twice its 2016 size at the same mesh density, so the space
-// opens out toward the horizon. The floor keeps its size: toward its edges the
-// abyss's -(noise·r/300)² term, growing with distance, throws up the jagged
-// ridges of the original concept, and the ocean carries on past them.
-const SHAPES: (ShapeDef & { shader: string })[] = [
-  { name: 'sphere', kind: 'sphere', size: 300, segments: [128, 128], position: [0, 0, 0], rotX: 0, lineWidth: 0.9, shader: 'heart' },
-  { name: 'ceiling', kind: 'plane', size: 6000, segments: [64, 64], position: [0, 1200, 0], rotX: Math.PI / 2, lineWidth: 1.6, shader: 'wave' },
-  { name: 'floor', kind: 'plane', size: 3000, segments: [32, 32], position: [0, -1200, 0], rotX: Math.PI / 2, lineWidth: 1.6, shader: 'abyss' },
-];
-
-const PAPERS = LOOKS;
-type Paper = LookName;
-const cssColor = (c: readonly number[]) => `rgb(${c.map((v) => Math.round(v * 255)).join(' ')})`;
-
 const HISTORY_RATE = 60; // spectrum history rows per second, independent of frame rate
 const EDITS_KEY = 'staccato:edits';
+const GEOMETRY_NAMES = Object.keys(GEOMETRIES) as GeometryName[];
+
+const STYLE_GLYPH: Record<Style, string> = {
+  wire: '#', chrome: '●', chromewire: '◍', glass: '○', glasswire: '◌', paint: '■', paintwire: '▣',
+};
 
 interface Entry extends ShaderSource {
   original: { vertex: string; fragment: string };
@@ -36,15 +28,17 @@ interface Entry extends ShaderSource {
 }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const cssColor = (c: readonly number[]) => `rgb(${c.map((v) => Math.round(v * 255)).join(' ')})`;
 
 export class Staccato {
   readonly renderer: Renderer;
   readonly camera: CameraRig;
   readonly audio: AudioEngine;
   readonly library = new Map<string, Entry>();
+  /** Object name → shader id, for the current scene. */
   readonly assignment = new Map<string, string>();
-  selected = 'sphere';
-  paper: Paper = 'origin';
+  scene: Scene = SCENES[0]!;
+  selected = '';
   time = 0;
 
   private readonly canvas = $<HTMLCanvasElement>('stage');
@@ -55,10 +49,10 @@ export class Staccato {
   private statusTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
-    this.renderer = new Renderer(this.canvas, SHAPES);
+    this.renderer = new Renderer(this.canvas);
     this.camera = new CameraRig(this.canvas);
     this.audio = new AudioEngine({
-      onSourceChange: (kind) => this.onSourceChange(kind),
+      onSourceChange: () => this.onSourceChange(),
       onBlocked: () => this.status('tap anywhere to start the sound', { attention: true, sticky: true }),
       onError: (message) => this.status(message, { sticky: false }),
     });
@@ -70,15 +64,11 @@ export class Staccato {
 
     for (const source of BUILTIN) this.addToLibrary(source, false);
     this.restoreEdits();
-    for (const shape of SHAPES) this.assignment.set(shape.name, shape.shader);
-    this.applyLook('origin');
-    this.readHash();
-    for (const [shape, id] of this.assignment) {
-      if (!this.assign(shape, id)) this.assign(shape, SHAPES.find((s) => s.name === shape)!.shader);
-    }
+
+    const params = new URLSearchParams(location.hash.slice(1));
+    this.load(sceneById(params.get('scene') ?? '') ?? SCENES[0]!, params);
 
     this.bindUi();
-    this.renderLists();
     window.addEventListener('staccato:shaders', (e) => this.hotReload((e as CustomEvent<ShaderSource[]>).detail));
     this.status('drop a song here, or try the demo', { sticky: true });
   }
@@ -91,10 +81,41 @@ export class Staccato {
     requestAnimationFrame(frame);
   }
 
-  // ——— shaders ———
+  // ——— scenes ———
 
-  /** Put a shader from the library on a shape. Returns false if it doesn't compile. */
-  assign(shape: string, id: string): boolean {
+  /** Switch scenes. The music carries on. */
+  setScene(id: string): void {
+    const scene = sceneById(id);
+    if (scene) this.load(scene, new URLSearchParams());
+  }
+
+  /** Set up a scene, then apply any overrides from the URL. */
+  private load(scene: Scene, params: URLSearchParams): void {
+    this.scene = scene;
+    this.renderer.world = scene.world;
+    this.renderer.setObjects(scene.objects);
+    this.camera.frame(scene.shot);
+    document.documentElement.style.setProperty('--paper', cssColor(scene.world.skyHorizon));
+    this.assignment.clear();
+    for (const obj of scene.objects) {
+      const geometry = params.get(`${obj.name}.shape`);
+      if (geometry && geometry in GEOMETRIES) this.renderer.setGeometry(obj.name, geometry as GeometryName);
+      const style = params.get(`${obj.name}.style`);
+      if (style && (STYLES as string[]).includes(style)) this.renderer.setStyle(obj.name, style as Style);
+      const shader = params.get(obj.name);
+      if (!shader || !this.assign(obj.name, shader, false)) this.assign(obj.name, obj.shader, false);
+    }
+    this.selected = scene.objects[0]!.name;
+    if (params.get('scale') === 'linear') this.audio.scale = 'linear';
+    this.writeHash();
+    this.renderLists();
+    if (this.editor.isOpen) this.openEditor();
+  }
+
+  // ——— objects ———
+
+  /** Put a shader from the library on an object. Returns false if it doesn't compile. */
+  assign(object: string, id: string, update = true): boolean {
     let entry = this.library.get(id);
     if (!entry) {
       const seed = seedFromId(id);
@@ -102,20 +123,29 @@ export class Staccato {
       entry = this.addToLibrary(generate(seed), true);
     }
     try {
-      this.renderer.setShader(shape, entry);
+      this.renderer.setShader(object, entry);
     } catch (e) {
-      console.error(`[staccato] ${id} on ${shape}:\n${(e as Error).message}`);
+      console.error(`[staccato] ${id} on ${object}:\n${(e as Error).message}`);
       this.status(`${id} didn't compile — see the console`);
       return false;
     }
-    this.assignment.set(shape, id);
-    this.writeHash();
-    this.renderLists();
-    if (this.editor.isOpen && shape === this.selected) this.openEditor();
+    this.assignment.set(object, id);
+    if (update) {
+      this.writeHash();
+      this.renderLists();
+      if (this.editor.isOpen && object === this.selected) this.openEditor();
+    }
     return true;
   }
 
-  /** Generate a new shader (2017's "+") and put it on the selected shape. */
+  /** Swap an object's shape, keeping its shader. */
+  setGeometry(object: string, geometry: GeometryName): void {
+    this.renderer.setGeometry(object, geometry);
+    this.writeHash();
+    this.renderLists();
+  }
+
+  /** Generate a new shader (2017's "+") and put it on the selected object. */
   generate(seed = randomSeed()): string {
     const source = generate(seed);
     this.addToLibrary(source, true);
@@ -124,11 +154,34 @@ export class Staccato {
     return source.id;
   }
 
-  select(shape: string): void {
-    if (!this.assignment.has(shape)) return;
-    this.selected = shape;
+  select(object: string): void {
+    if (!this.assignment.has(object)) return;
+    this.selected = object;
     this.renderLists();
     if (this.editor.isOpen) this.openEditor();
+  }
+
+  cycleStyle(object = this.selected): void {
+    if (!this.renderer.enhanced) {
+      this.status('chrome and glass need float render targets, which this device lacks');
+      return;
+    }
+    const next = STYLES[(STYLES.indexOf(this.renderer.style(object)) + 1) % STYLES.length]!;
+    this.renderer.setStyle(object, next);
+    this.writeHash();
+    this.renderLists();
+    this.status(`${object}: ${next}`);
+  }
+
+  private cycleGeometry(): void {
+    const current = this.renderer.geometryOf(this.selected);
+    if (!current) return;
+    this.setGeometry(this.selected, GEOMETRY_NAMES[(GEOMETRY_NAMES.indexOf(current) + 1) % GEOMETRY_NAMES.length]!);
+  }
+
+  private toggleVisible(object: string): void {
+    this.renderer.setVisible(object, !this.renderer.isVisible(object));
+    this.renderLists();
   }
 
   // ——— loop ———
@@ -195,9 +248,9 @@ export class Staccato {
     }
     entry.vertex = vertex;
     entry.fragment = fragment;
-    // Every other shape wearing this shader picks up the edit too.
-    for (const [shape, other] of this.assignment) {
-      if (other === id && shape !== this.selected) this.renderer.setShader(shape, entry);
+    // Every other object wearing this shader picks up the edit too.
+    for (const [object, other] of this.assignment) {
+      if (other === id && object !== this.selected) this.renderer.setShader(object, entry);
     }
     this.saveEdits();
     this.editor.setTitle(this.editorTitle());
@@ -211,7 +264,7 @@ export class Staccato {
     entry.vertex = entry.original.vertex;
     entry.fragment = entry.original.fragment;
     this.saveEdits();
-    for (const [shape, other] of this.assignment) if (other === id) this.assign(shape, id);
+    for (const [object, other] of this.assignment) if (other === id) this.assign(object, id);
     this.openEditor();
   }
 
@@ -225,7 +278,7 @@ export class Staccato {
       const wasEdited = isEdited(entry);
       entry.original = { vertex: source.vertex, fragment: source.fragment };
       if (!wasEdited) Object.assign(entry, { vertex: source.vertex, fragment: source.fragment, note: source.note });
-      for (const [shape, id] of this.assignment) if (id === source.id) this.assign(shape, id);
+      for (const [object, id] of this.assignment) if (id === source.id) this.assign(object, id);
     }
     this.renderLists();
   }
@@ -273,51 +326,24 @@ export class Staccato {
     }
   }
 
-  // ——— state in the URL: share a scene by sharing the link ———
-
-  private readHash(): void {
-    const params = new URLSearchParams(location.hash.slice(1));
-    for (const shape of SHAPES) {
-      const id = params.get(shape.name);
-      if (id) this.assignment.set(shape.name, id);
-    }
-    const paper = params.get('paper');
-    if (paper && paper in PAPERS) this.applyLook(paper as Paper);
-    for (const shape of SHAPES) {
-      const style = params.get(`${shape.name}Style`);
-      if (style && (STYLES as string[]).includes(style)) this.renderer.setStyle(shape.name, style as Style);
-    }
-    const scale = params.get('scale');
-    if (scale === 'linear' || scale === 'log') this.audio.scale = scale;
-  }
+  // ——— the URL describes the scene and what you changed in it ———
 
   private writeHash(): void {
     const params = new URLSearchParams();
-    for (const [shape, id] of this.assignment) params.set(shape, id);
-    for (const shape of SHAPES) {
-      const style = this.renderer.style(shape.name);
-      if (style !== PAPERS[this.paper].styles[shape.name]) params.set(`${shape.name}Style`, style);
+    params.set('scene', this.scene.id);
+    for (const obj of this.scene.objects) {
+      const shader = this.assignment.get(obj.name);
+      if (shader && shader !== obj.shader) params.set(obj.name, shader);
+      const geometry = this.renderer.geometryOf(obj.name);
+      if (geometry && geometry !== obj.geometry) params.set(`${obj.name}.shape`, geometry);
+      const style = this.renderer.style(obj.name);
+      if (style !== obj.style) params.set(`${obj.name}.style`, style);
     }
-    if (this.paper !== 'origin') params.set('paper', this.paper);
     if (this.audio.scale !== 'log') params.set('scale', this.audio.scale);
     history.replaceState(null, '', `#${params}`);
   }
 
   // ——— view ———
-
-  /** Change the look; shapes take its default styles. */
-  setPaper(paper: Paper): void {
-    this.applyLook(paper);
-    this.writeHash();
-  }
-
-  private applyLook(paper: Paper): void {
-    this.paper = paper;
-    this.renderer.look = PAPERS[paper];
-    for (const shape of SHAPES) this.renderer.setStyle(shape.name, PAPERS[paper].styles[shape.name] ?? 'wire');
-    this.renderLists();
-    document.documentElement.style.setProperty('--paper', cssColor(PAPERS[paper].skyHorizon));
-  }
 
   setScale(scale: Scale): void {
     this.audio.scale = scale;
@@ -329,93 +355,91 @@ export class Staccato {
     const shaderId = this.assignment.get(this.selected) ?? '';
     const entry = this.library.get(shaderId);
     this.renderer.hudInfo = {
-      look: this.paper,
+      look: this.scene.id,
       shape: this.selected,
       shader: shaderId,
       source: entry ? `${entry.vertex}\n${entry.fragment}` : '',
-      sampleRate: this.audio?.ctx.sampleRate ?? 48000,
-      fftSize: 2048,
+      sampleRate: this.audio.ctx.sampleRate,
+      fftSize: FFT_SIZE,
     };
 
-    const shapes = $<HTMLElement>('shapes').querySelector('ul')!;
-    shapes.replaceChildren(
-      ...SHAPES.map((shape) => {
+    // Scenes, in the bar.
+    const scenes = $<HTMLElement>('scenes');
+    scenes.replaceChildren(
+      ...SCENES.map((s) => {
+        const b = button(s.id === '16' ? "'16" : s.id, () => this.setScene(s.id));
+        b.title = s.mood;
+        b.setAttribute('aria-pressed', String(s.id === this.scene.id));
+        return b;
+      }),
+    );
+
+    // Objects, then the shapes the selected one can become.
+    const objects = $<HTMLElement>('shapes').querySelector('ul.objects')!;
+    objects.replaceChildren(
+      ...this.scene.objects.map((obj) => {
         const li = document.createElement('li');
-        const pick = document.createElement('button');
-        pick.type = 'button';
-        pick.setAttribute('aria-current', String(shape.name === this.selected));
-        pick.innerHTML = `${shape.name}<span class="meta"></span>`;
-        pick.querySelector('.meta')!.textContent = this.assignment.get(shape.name) ?? '';
-        pick.addEventListener('click', () => this.select(shape.name));
-        const visible = this.renderer.isVisible(shape.name);
-        const eye = document.createElement('button');
-        eye.type = 'button';
-        eye.className = 'visibility';
-        eye.textContent = visible ? '•' : '◦';
-        eye.title = visible ? `hide ${shape.name}` : `show ${shape.name}`;
-        eye.setAttribute('aria-pressed', String(!visible));
-        eye.addEventListener('click', () => this.toggleVisible(shape.name));
-        const style = document.createElement('button');
-        style.type = 'button';
+        const pick = button(obj.name, () => this.select(obj.name));
+        pick.setAttribute('aria-current', String(obj.name === this.selected));
+        const meta = document.createElement('span');
+        meta.className = 'meta';
+        meta.textContent = this.renderer.geometryOf(obj.name) ?? '';
+        pick.append(meta);
+        const current = this.renderer.style(obj.name);
+        const style = button(STYLE_GLYPH[current], () => this.cycleStyle(obj.name));
         style.className = 'visibility';
-        const current = this.renderer.style(shape.name);
-        style.textContent = current === 'wire' ? '#' : current === 'chrome' ? '●' : '◍';
         style.title = `${current} — click for ${STYLES[(STYLES.indexOf(current) + 1) % STYLES.length]} (C)`;
-        style.addEventListener('click', () => this.cycleStyle(shape.name));
+        const visible = this.renderer.isVisible(obj.name);
+        const eye = button(visible ? '•' : '◦', () => this.toggleVisible(obj.name));
+        eye.className = 'visibility';
+        eye.title = visible ? `hide ${obj.name}` : `show ${obj.name}`;
+        eye.setAttribute('aria-pressed', String(!visible));
         li.append(pick, style, eye);
         return li;
       }),
     );
 
-    const current = this.assignment.get(this.selected);
-    const shaders = $<HTMLElement>('shaders').querySelector('ul')!;
-    shaders.replaceChildren(
-      ...[...this.library.values()].map((entry, i) => {
+    const shapes = $<HTMLElement>('shapes').querySelector('ul.geometries')!;
+    const geometry = this.renderer.geometryOf(this.selected);
+    shapes.replaceChildren(
+      ...GEOMETRY_NAMES.map((name) => {
         const li = document.createElement('li');
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.title = entry.note;
-        button.setAttribute('aria-pressed', String(entry.id === current));
-        if (isEdited(entry)) button.classList.add('edited');
-        const key = document.createElement('span');
-        key.className = 'key';
-        key.textContent = i < 9 ? String(i + 1) : '';
-        button.append(key, entry.id);
-        button.addEventListener('click', () => this.assign(this.selected, entry.id));
-        li.append(button);
+        const b = button(name, () => this.setGeometry(this.selected, name));
+        b.setAttribute('aria-pressed', String(name === geometry));
+        li.append(b);
         return li;
       }),
     );
-  }
 
-  cycleStyle(shape = this.selected): void {
-    if (!this.renderer.enhanced) {
-      this.status('chrome needs float render targets, which this device lacks');
-      return;
-    }
-    const next = STYLES[(STYLES.indexOf(this.renderer.style(shape)) + 1) % STYLES.length]!;
-    this.renderer.setStyle(shape, next);
-    this.writeHash();
-    this.renderLists();
-    this.status(`${shape}: ${next}`);
-  }
-
-  private toggleVisible(shape: string): void {
-    this.renderer.setVisible(shape, !this.renderer.isVisible(shape));
-    this.renderLists();
-  }
-
-  private onSourceChange(kind: SourceKind): void {
-    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-source]')) {
-      button.setAttribute('aria-pressed', String(button.dataset['source'] === kind));
-    }
-    this.status(this.nowPlaying(), { sticky: true });
+    const shaders = $<HTMLElement>('shaders').querySelector('ul')!;
+    shaders.replaceChildren(
+      ...[...this.library.values()].map((e, i) => {
+        const li = document.createElement('li');
+        const b = button('', () => this.assign(this.selected, e.id));
+        b.title = e.note;
+        b.setAttribute('aria-pressed', String(e.id === shaderId));
+        if (isEdited(e)) b.classList.add('edited');
+        const key = document.createElement('span');
+        key.className = 'key';
+        key.textContent = i < 9 ? String(i + 1) : '';
+        b.append(key, e.id);
+        li.append(b);
+        return li;
+      }),
+    );
   }
 
   private nowPlaying(): string {
     const { kind, label } = this.audio;
     if (kind === 'none') return '';
     return kind === 'file' ? `♪ ${label}` : kind === 'demo' ? `♪ ${label} (demo)` : `listening: ${label}`;
+  }
+
+  private onSourceChange(): void {
+    for (const b of document.querySelectorAll<HTMLButtonElement>('[data-source]')) {
+      b.setAttribute('aria-pressed', String(b.dataset['source'] === this.audio.kind));
+    }
+    this.status(this.nowPlaying(), { sticky: true });
   }
 
   status(text: string, { attention = false, sticky = false } = {}): void {
@@ -454,7 +478,7 @@ export class Staccato {
     const unlock = () => {
       const wasBlocked = $<HTMLElement>('status').classList.contains('attention');
       void this.audio.unlock().then(() => {
-        if (wasBlocked && !this.audio.paused) this.onSourceChange(this.audio.kind);
+        if (wasBlocked && !this.audio.paused) this.onSourceChange();
       });
     };
     window.addEventListener('pointerdown', unlock, { capture: true });
@@ -473,8 +497,8 @@ export class Staccato {
       tab: () => void this.audio.useTab(),
       demo: () => void (this.audio.kind === 'demo' ? this.audio.stop() : this.audio.useDemo()),
     };
-    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-source]')) {
-      button.addEventListener('click', () => sources[button.dataset['source']!]?.());
+    for (const b of document.querySelectorAll<HTMLButtonElement>('[data-source]')) {
+      b.addEventListener('click', () => sources[b.dataset['source']!]?.());
     }
 
     $('add-shader').addEventListener('click', () => this.generate());
@@ -508,24 +532,23 @@ export class Staccato {
   private onKey(e: KeyboardEvent): void {
     const target = e.target as HTMLElement;
     if (e.metaKey || e.ctrlKey || e.altKey || target.closest('textarea, input, dialog')) return;
-    const shapeNames = SHAPES.map((s) => s.name);
+    const names = this.scene.objects.map((o) => o.name);
     const ids = [...this.library.keys()];
+    const step = <T>(list: T[], current: T, by: number) => list[(list.indexOf(current) + by + list.length) % list.length]!;
     const actions: Record<string, () => void> = {
       ' ': () => void this.audio.togglePause(),
       o: () => $<HTMLInputElement>('file-input').click(),
       m: () => void this.audio.useMic(),
       t: () => void this.audio.useTab(),
       d: () => void (this.audio.kind === 'demo' ? this.audio.stop() : this.audio.useDemo()),
-      s: () => this.select(shapeNames[(shapeNames.indexOf(this.selected) + 1) % shapeNames.length]!),
+      b: () => this.setScene(step(SCENES, this.scene, 1).id),
+      s: () => this.select(step(names, this.selected, 1)),
+      x: () => this.cycleGeometry(),
       g: () => this.generate(),
       '+': () => this.generate(),
       e: () => (this.editor.isOpen ? this.editor.close() : this.openEditor()),
-      v: () => this.toggleVisible(this.selected),
       c: () => this.cycleStyle(),
-      b: () => {
-        const papers = Object.keys(PAPERS) as Paper[];
-        this.setPaper(papers[(papers.indexOf(this.paper) + 1) % papers.length]!);
-      },
+      v: () => this.toggleVisible(this.selected),
       l: () => this.setScale(this.audio.scale === 'log' ? 'linear' : 'log'),
       r: () => void this.toggleRecording(),
       h: () => document.body.classList.toggle('clean'),
@@ -554,6 +577,14 @@ export class Staccato {
   }
 }
 
+function button(text: string, onClick: () => void): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = text;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
 function isEdited(entry: Entry): boolean {
   return entry.vertex !== entry.original.vertex || entry.fragment !== entry.original.fragment;
 }
@@ -578,4 +609,3 @@ function boot(): void {
 }
 
 boot();
-

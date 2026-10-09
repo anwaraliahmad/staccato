@@ -103,7 +103,7 @@ export class Hud {
     // The live source, set like a code layer.
     const mono = `${10 * px}px ui-monospace, Menlo, Consolas, monospace`;
     g.font = mono;
-    g.globalAlpha = 0.42;
+    g.globalAlpha = 0.24;
     const lines = info.source.replace(/\t/g, '  ').split('\n').slice(0, Math.floor((h * 0.55) / (13 * px)));
     lines.forEach((text, i) => g.fillText(text.slice(0, 80), 24 * px, 96 * px + i * 13 * px));
 

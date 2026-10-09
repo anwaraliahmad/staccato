@@ -104,3 +104,27 @@ export function invert(m: Mat4, out: Mat4 = new Float32Array(16)): Mat4 {
   out[15] = (a20 * b03 - a21 * b01 + a22 * b00) * d;
   return out;
 }
+
+/** Translation · rotation (Euler, applied X then Y then Z) · uniform scale. */
+export function compose(position: Vec3, rotation: Vec3 = [0, 0, 0], scale = 1, out: Mat4 = new Float32Array(16)): Mat4 {
+  const [x, y, z] = rotation;
+  const cx = Math.cos(x), sx = Math.sin(x), cy = Math.cos(y), sy = Math.sin(y), cz = Math.cos(z), sz = Math.sin(z);
+  // R = Rz · Ry · Rx, column-major.
+  out[0] = cz * cy * scale;
+  out[1] = sz * cy * scale;
+  out[2] = -sy * scale;
+  out[3] = 0;
+  out[4] = (cz * sy * sx - sz * cx) * scale;
+  out[5] = (sz * sy * sx + cz * cx) * scale;
+  out[6] = cy * sx * scale;
+  out[7] = 0;
+  out[8] = (cz * sy * cx + sz * sx) * scale;
+  out[9] = (sz * sy * cx - cz * sx) * scale;
+  out[10] = cy * cx * scale;
+  out[11] = 0;
+  out[12] = position[0];
+  out[13] = position[1];
+  out[14] = position[2];
+  out[15] = 1;
+  return out;
+}

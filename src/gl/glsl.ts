@@ -43,11 +43,8 @@ uniform vec2 mouse;          // pointer, -0.5..0.5
 uniform sampler2D spectrumTex;
 uniform sampler2D historyTex;
 uniform float historyHead;
-uniform mat4 modelMatrix;
-uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform mat4 viewMatrix;
-uniform mat3 normalMatrix;
 uniform vec3 cameraPosition;
 
 // dB of FFT bin 0..511 — the 2016 frequency[int(bin)], clamped like Chrome clamped it.
@@ -70,11 +67,35 @@ float echo(float t, float age) {
 }
 `;
 
+// Objects can be drawn many times (a colonnade, a row of louvers). Each copy's
+// transform lives in a texture; the matrices shaders know from 2016 are set
+// per copy before their main() runs, and \`instance\` says which copy, 0..1.
+export const INSTANCE_GLSL = /* glsl */ `
+uniform mat4 staccato_objectMatrix;
+uniform highp sampler2D staccato_instances;
+uniform float staccato_instanceCount;
+mat4 modelMatrix;
+mat4 modelViewMatrix;
+mat3 normalMatrix;
+float instance;
+void staccato_setupInstance(int i) {
+  mat4 m = mat4(
+    texelFetch(staccato_instances, ivec2(0, i), 0),
+    texelFetch(staccato_instances, ivec2(1, i), 0),
+    texelFetch(staccato_instances, ivec2(2, i), 0),
+    texelFetch(staccato_instances, ivec2(3, i), 0));
+  modelMatrix = staccato_objectMatrix * m;
+  modelViewMatrix = viewMatrix * modelMatrix;
+  normalMatrix = mat3(modelViewMatrix);
+  instance = staccato_instanceCount > 1.0 ? float(i) / (staccato_instanceCount - 1.0) : 0.0;
+}
+`;
+
 export const VERTEX_PRELUDE = /* glsl */ `
 in vec3 position;
 in vec3 normal;
 in vec2 uv;
-`;
+${INSTANCE_GLSL}`;
 
 
 export function isClassic(source: string): boolean {
@@ -139,15 +160,21 @@ export function rewriteFrequencyIndexing(src: string): string {
   return out + src.slice(last);
 }
 
+/** Wrapper code after the user's source is numbered from here, so its errors are recognizable. */
+export const WRAPPER_LINE = 10000;
+
 /** Full source handed to the GL compiler, for drawing the user's shaders directly. */
 export function assemble(source: string, stage: Stage): string {
   const body = translate(source, stage);
-  const prelude = stage === 'vertex' ? VERTEX_PRELUDE : fragmentPrelude(body);
-  return `#version 300 es\n${COMMON}${prelude}\n#line 1\n${body}`;
+  if (stage === 'fragment') return `#version 300 es\n${COMMON}${fragmentPrelude(body)}\n#line 1\n${body}`;
+  return `#version 300 es\n${COMMON}${VERTEX_PRELUDE}\n#line 1\n${renameMain(body)}
+#line ${WRAPPER_LINE}
+void main() {
+  staccato_setupInstance(gl_InstanceID);
+  staccato_user_main();
 }
-
-/** Wrapper code after the user's source is numbered from here, so its errors are recognizable. */
-export const WRAPPER_LINE = 10000;
+`;
+}
 
 /**
  * The user's color output. 2016-style shaders write gl_FragColor (translated to

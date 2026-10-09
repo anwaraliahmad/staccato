@@ -94,6 +94,7 @@ export class Program {
           gl.uniform1i(slot.location, Number(v));
           break;
         case gl.INT_VEC2:
+        case gl.BOOL_VEC2:
           gl.uniform2iv(slot.location, v as Int32Array);
           break;
         case gl.FLOAT_VEC2:

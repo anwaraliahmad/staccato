@@ -20,6 +20,7 @@
 
 	<header class="bar">
 		<h1>Staccato <span class="tagline">// drag + drop a song // pick a shader // enjoy</span></h1>
+		<nav id="scenes" class="scenes" aria-label="Scene"></nav>
 		<nav class="sources" aria-label="Sound source">
 			<button type="button" data-source="file" title="Open a song (O)">file</button>
 			<button type="button" data-source="mic" title="Listen to the microphone (M)">mic</button>
@@ -30,8 +31,10 @@
 		<p id="status" role="status" aria-live="polite"></p>
 	</header>
 
-	<aside id="shapes" class="side-bar left prevent-select" aria-label="Shapes">
-		<ul></ul>
+	<aside id="shapes" class="side-bar left prevent-select" aria-label="Objects and shapes">
+		<ul class="objects"></ul>
+		<h3>shape</h3>
+		<ul class="geometries"></ul>
 	</aside>
 
 	<aside id="shaders" class="side-bar right prevent-select" aria-label="Shaders">
@@ -61,18 +64,20 @@
 
 	<dialog id="help">
 		<h2>Staccato</h2>
-		<p>Drop a song anywhere, or pick a source up top. Shapes on the left, shaders on the right:
-		pick a shape, then a shader for it. Drag to orbit, scroll to zoom.</p>
+		<p>Drop a song anywhere, or pick a source up top. Pick a scene from the bar. Its objects are on the
+		left: pick one, then give it any shape (below them) or any shader (on the right), while the music plays.
+		Drag to orbit, scroll to zoom.</p>
 		<dl>
 			<dt>space</dt><dd>play / pause</dd>
 			<dt>o m t d</dt><dd>file, microphone, tab audio, demo</dd>
-			<dt>s</dt><dd>next shape</dd>
-			<dt>1 – 9</dt><dd>shader for the selected shape</dd>
+			<dt>b</dt><dd>next scene</dd>
+			<dt>s</dt><dd>next object</dd>
+			<dt>x</dt><dd>next shape for the selected object</dd>
+			<dt>1 – 9</dt><dd>shader for the selected object</dd>
 			<dt>g</dt><dd>generate a shader</dd>
-			<dt>e</dt><dd>edit the selected shape's GLSL</dd>
-			<dt>c</dt><dd>wire, chrome, glass (with or without wire) for the selected shape</dd>
-			<dt>v</dt><dd>show / hide the selected shape</dd>
-			<dt>b</dt><dd>look: origin, pavilion, metal, '16, night</dd>
+			<dt>e</dt><dd>edit the selected object's GLSL</dd>
+			<dt>c</dt><dd>wire, chrome, glass, paint — with or without wire</dd>
+			<dt>v</dt><dd>show / hide the selected object</dd>
 			<dt>l</dt><dd>frequency scale: log / linear (2016)</dd>
 			<dt>r</dt><dd>record a clip</dd>
 			<dt>h</dt><dd>hide everything but the music</dd>
@@ -80,7 +85,7 @@
 			<dt>← → ↑ ↓ − =</dt><dd>orbit and zoom</dd>
 		</dl>
 		<p class="fine">Shaders get <code>time</code>, <code>frequency(bin)</code> (dB, bins 0–511), <code>spectrum(t)</code>, <code>echo(t, age)</code>,
-			<code>level</code>, <code>onset</code>, <code>bass</code>, <code>mid</code>, <code>treble</code>, <code>size</code>, <code>mouse</code>.
+			<code>level</code>, <code>onset</code>, <code>bass</code>, <code>mid</code>, <code>treble</code>, <code>size</code>, <code>instance</code>, <code>mouse</code>.
 			2016-style GLSL (<code>varying</code>, <code>gl_FragColor</code>) works as-is.
 			<a href="https://github.com/anwaraliahmad/staccato" target="_blank" rel="noopener">Source</a>.</p>
 		<form method="dialog"><button>ok</button></form>

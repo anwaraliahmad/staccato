@@ -15,7 +15,7 @@
 // Everything is plain source generation (no GL calls) so it can be tested.
 
 import {
-  COMMON, VERTEX_PRELUDE, WRAPPER_LINE, fragmentOutput, fragmentPrelude, renameMain, translate, vertexVaryings,
+  COMMON, INSTANCE_GLSL, VERTEX_PRELUDE, WRAPPER_LINE, fragmentOutput, fragmentPrelude, renameMain, translate, vertexVaryings,
   type Varying,
 } from './glsl';
 
@@ -70,12 +70,15 @@ ${user}
 uniform ivec2 staccato_grid;
 ${slots.map((i) => `flat out vec4 _c${i};`).join('\n')}
 void main() {
+  staccato_setupInstance(gl_InstanceID);
   staccato_user_main();
 ${slots.slice(1).map((i) => `  _c${i} = vec4(0.0);`).join('\n')}
   _c0 = gl_Position;
 ${pack}
-  ivec2 cell = ivec2(gl_VertexID % staccato_grid.x, gl_VertexID / staccato_grid.x);
-  gl_Position = vec4((vec2(cell) + 0.5) / vec2(staccato_grid) * 2.0 - 1.0, 0.0, 1.0);
+  // Copies stack downward in the capture: copy i owns rows [i·rows, (i+1)·rows).
+  ivec2 cell = ivec2(gl_VertexID % staccato_grid.x, gl_VertexID / staccato_grid.x + gl_InstanceID * staccato_grid.y);
+  ivec2 size = ivec2(staccato_grid.x, staccato_grid.y * int(staccato_instanceCount));
+  gl_Position = vec4((vec2(cell) + 0.5) / vec2(size) * 2.0 - 1.0, 0.0, 1.0);
   gl_PointSize = 1.0;
 }
 `;
@@ -184,6 +187,7 @@ ${COMMON}
 ${captureSamplers(layout)}
 uniform highp usampler2D staccato_edges;
 uniform float staccato_lineWidth; // device pixels
+uniform int staccato_rows;        // grid rows per copy
 ${unpackVaryings(layout)}
 out float staccato_across;
 out float staccato_halfWidth;
@@ -193,7 +197,7 @@ out float staccato_depth;
 const ivec2 CORNERS[6] = ivec2[6](ivec2(0, -1), ivec2(1, -1), ivec2(1, 1), ivec2(0, -1), ivec2(1, 1), ivec2(0, 1));
 
 ivec2 cellOf(uint v, int width) {
-  return ivec2(int(v) % width, int(v) / width);
+  return ivec2(int(v) % width, int(v) / width + gl_InstanceID * staccato_rows);
 }
 
 void main() {
@@ -280,42 +284,52 @@ void main() {
 export function surfaceShaders(fragmentSource: string, layout: CaptureLayout): { vertex: string; fragment: string } {
   const vertex = `#version 300 es
 ${COMMON}
+${INSTANCE_GLSL}
 ${captureSamplers(layout)}
 in vec3 normal;
 uniform mat4 staccato_inverseProjection;
-uniform bool staccato_wrapX; // the sphere's first and last columns are the same seam
+uniform ivec2 staccato_grid;   // cols, rows per copy
+uniform bvec2 staccato_wrap;   // closed in u / v: the last column/row repeats the first
 ${unpackVaryings(layout)}
 out vec3 staccato_viewPosition;
 out vec3 staccato_viewNormal;
 
+int base;
+
 vec3 viewAt(ivec2 cell) {
-  vec4 v = staccato_inverseProjection * texelFetch(staccato_cap0, cell, 0);
+  vec4 v = staccato_inverseProjection * texelFetch(staccato_cap0, ivec2(cell.x, cell.y + base), 0);
   return v.xyz / v.w;
 }
 
+int neighbour(int i, int step, int count, bool wrap) {
+  int j = i + step;
+  if (wrap) {
+    if (j < 0) return count - 2;
+    if (j > count - 1) return 1;
+    return j;
+  }
+  return clamp(j, 0, count - 1);
+}
+
 void main() {
-  ivec2 grid = textureSize(staccato_cap0, 0);
-  ivec2 cell = ivec2(gl_VertexID % grid.x, gl_VertexID / grid.x);
+  staccato_setupInstance(gl_InstanceID);
+  ivec2 grid = staccato_grid;
+  base = gl_InstanceID * grid.y;
+  ivec2 local = ivec2(gl_VertexID % grid.x, gl_VertexID / grid.x);
+  ivec2 cell = ivec2(local.x, local.y + base);
   staccato_unpack(cell);
   vec4 clip = texelFetch(staccato_cap0, cell, 0);
-  vec3 p = viewAt(cell);
+  vec3 p = viewAt(local);
 
-  int left = cell.x - 1, right = cell.x + 1;
-  if (staccato_wrapX) {
-    if (left < 0) left = grid.x - 2;
-    if (right > grid.x - 1) right = 1;
-  } else {
-    left = max(left, 0);
-    right = min(right, grid.x - 1);
-  }
-  int up = max(cell.y - 1, 0), down = min(cell.y + 1, grid.y - 1);
-  vec3 du = viewAt(ivec2(right, cell.y)) - viewAt(ivec2(left, cell.y));
-  vec3 dv = viewAt(ivec2(cell.x, down)) - viewAt(ivec2(cell.x, up));
+  int left = neighbour(local.x, -1, grid.x, staccato_wrap.x), right = neighbour(local.x, 1, grid.x, staccato_wrap.x);
+  int up = neighbour(local.y, -1, grid.y, staccato_wrap.y), down = neighbour(local.y, 1, grid.y, staccato_wrap.y);
+  vec3 du = viewAt(ivec2(right, local.y)) - viewAt(ivec2(left, local.y));
+  vec3 dv = viewAt(ivec2(local.x, down)) - viewAt(ivec2(local.x, up));
 
-  vec3 base = normalize(normalMatrix * normal);
+  vec3 n0 = normalize(normalMatrix * normal);
   vec3 n = cross(du, dv);
-  n = dot(n, n) > 1e-8 ? normalize(n) : base;
-  if (dot(n, base) < 0.0) n = -n;
+  n = dot(n, n) > 1e-8 ? normalize(n) : n0;
+  if (dot(n, n0) < 0.0) n = -n;
 
   staccato_viewPosition = p;
   staccato_viewNormal = n;
@@ -331,7 +345,7 @@ ${user.body}
 #line ${WRAPPER_LINE}
 uniform float staccato_tint;
 uniform float staccato_glow;
-uniform bool staccato_glass;
+uniform int staccato_material;       // 0 chrome, 1 glass, 2 paint
 uniform sampler2D staccato_behind;   // the frame so far, mipmapped, for refraction
 uniform float staccato_frost;        // blur of what's seen through glass (mip level)
 uniform vec3 staccato_glassTint;
@@ -347,8 +361,9 @@ void main() {
   vec3 tint = clamp(${user.out}.rgb, 0.0, 1.0);
 
   vec3 n = normalize(staccato_viewNormal);
-  if (!gl_FrontFacing) n = -n;
   vec3 v = normalize(-staccato_viewPosition);
+  // Inside faces of glass, and the far side of open surfaces, face the viewer too.
+  if (dot(n, v) < 0.0) n = -n;
   float facing = clamp(dot(n, v), 0.0, 1.0);
   // View space back to world: the view matrix's rotation is orthonormal.
   mat3 toWorld = transpose(mat3(viewMatrix));
@@ -361,7 +376,12 @@ void main() {
   vec3 iridescence = 0.5 + 0.5 * cos(6.28318 * (film + vec3(0.0, 0.33, 0.67)));
 
   vec3 color;
-  if (staccato_glass) {
+  if (staccato_material == 2) {
+    // Paint: the shader's own colour, lit softly by the sky and the sun.
+    vec3 wn = toWorld * n;
+    float light = 0.55 + 0.45 * max(dot(wn, staccato_sunDirection), 0.0);
+    color = tint * light + staccato_sky(wn) * 0.06;
+  } else if (staccato_material == 1) {
     // Refraction: look through the surface at the frame drawn so far, bent by
     // the normal, frosted by blur, split slightly by wavelength.
     vec2 uv = gl_FragCoord.xy / resolution;
@@ -372,7 +392,7 @@ void main() {
       textureLod(staccato_behind, uv - bend * 1.08, staccato_frost).b
     );
     float fresnel = 0.04 + 0.96 * pow(1.0 - facing, 4.0);
-    vec3 through = behind * staccato_glassTint * mix(vec3(1.0), 0.6 + tint * 0.8, staccato_tint * 0.5);
+    vec3 through = behind * staccato_glassTint * mix(vec3(1.0), 0.35 + tint * 1.1, staccato_tint);
     color = mix(through, env, fresnel);
     color += iridescence * pow(1.0 - facing, 3.0) * staccato_iridescence * 0.35;
     color += staccato_sunColor * sun * 6.0;
@@ -464,7 +484,8 @@ void main() {
     // The sky in the water is darker than the sky itself: deep water swallows light.
     vec3 sea = mix(water, staccato_sky(r) * 0.55, fresnel);
     // Glitter: the sun caught by individual facets.
-    sea += staccato_sunColor * pow(max(dot(r, staccato_sunDirection), 0.0), 900.0) * (14.0 + level * 20.0);
+    // Calm water gives one soft reflection; rough water scatters it into glitter.
+    sea += staccato_sunColor * pow(max(dot(r, staccato_sunDirection), 0.0), 900.0) * (14.0 + level * 20.0) * min(1.0, staccato_waves * 1.5);
     float fog = staccato_fogAmount(t * 0.6);
     sea = mix(sea, staccato_sky(normalize(vec3(d.x, 0.0, d.z))), fog);
     c = mix(c, sea, staccato_ocean);

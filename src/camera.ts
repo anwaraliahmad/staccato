@@ -7,9 +7,22 @@
 import { lookAt, perspective, type Mat4, type Vec3 } from './gl/math';
 
 const IDLE_SECONDS = 6;
-const FOV = 90; // the 2016 field of view
-const MIN_DISTANCE = 350;
-const MAX_DISTANCE = 4000;
+
+/** How a scene wants to be seen. */
+export interface Shot {
+  distance: number;
+  /** Resting height of the orbit, radians, and how far the automatic path bobs from it. */
+  elevation: number;
+  swing: number;
+  /** Radians per second of automatic orbit. */
+  speed: number;
+  target: Vec3;
+  fov: number;
+  /** How far the camera leans toward the pointer (radians at the screen edge). */
+  parallax: number;
+}
+
+export const DEFAULT_SHOT: Shot = { distance: 1000, elevation: 0, swing: 0.35, speed: 0.12, target: [0, 0, 0], fov: 90, parallax: 1.4 };
 
 export class CameraRig {
   readonly view: Mat4 = new Float32Array(16);
@@ -20,6 +33,9 @@ export class CameraRig {
   private elevation = 0;
   private distance = 1000;
   private targetDistance = 1000;
+  private shot: Shot = DEFAULT_SHOT;
+  private target: Vec3 = [0, 0, 0];
+  private fov = DEFAULT_SHOT.fov;
   private mouse = { x: 0, y: 0 };
   private parallax = { x: 0, y: 0 };
   private idle = IDLE_SECONDS; // start on the automatic path
@@ -41,6 +57,13 @@ export class CameraRig {
     }, { passive: false });
   }
 
+  /** Move to a scene's framing; the camera glides there rather than cutting. */
+  frame(shot: Shot): void {
+    this.shot = shot;
+    this.targetDistance = shot.distance;
+    this.elevation = shot.elevation;
+  }
+
   /** Pointer position, -0.5..0.5, as the shaders' `mouse` uniform. */
   get pointer(): Float32Array {
     return new Float32Array([this.mouse.x, -this.mouse.y]);
@@ -53,9 +76,13 @@ export class CameraRig {
     if (this.idle > IDLE_SECONDS && !still) {
       // 499fe81's path, slowed down: a lazy orbit that bobs above and below.
       this.pathTime += delta * 0.15;
-      this.azimuth += delta * 0.12;
-      this.elevation += (0.35 * Math.sin(this.pathTime * 2) - this.elevation) * Math.min(1, delta);
+      this.azimuth += delta * this.shot.speed;
+      const rest = this.shot.elevation + this.shot.swing * Math.sin(this.pathTime * 2);
+      this.elevation += (rest - this.elevation) * Math.min(1, delta);
     }
+    const ease = Math.min(1, delta * 1.5);
+    this.target = this.target.map((t, i) => t + (this.shot.target[i]! - t) * ease) as Vec3;
+    this.fov += (this.shot.fov - this.fov) * ease;
 
     // 3313768: ease toward the pointer (there it was `(mouse*2000 - pos) * delta*3`).
     const k = Math.min(1, delta * 3);
@@ -65,15 +92,16 @@ export class CameraRig {
 
     this.distance += (this.targetDistance - this.distance) * Math.min(1, delta * 4);
 
-    const az = this.azimuth + this.parallax.x * 1.4;
-    const el = clamp(this.elevation + this.parallax.y * 1.0, -1.45, 1.45);
+    const az = this.azimuth + this.parallax.x * this.shot.parallax;
+    const el = clamp(this.elevation + this.parallax.y * this.shot.parallax * 0.7, -1.45, 1.45);
+    const [tx, ty, tz] = this.target;
     this.eye = [
-      this.distance * Math.cos(el) * Math.sin(az),
-      this.distance * Math.sin(el),
-      this.distance * Math.cos(el) * Math.cos(az),
+      tx + this.distance * Math.cos(el) * Math.sin(az),
+      ty + this.distance * Math.sin(el),
+      tz + this.distance * Math.cos(el) * Math.cos(az),
     ];
-    lookAt(this.eye, [0, 0, 0], [0, 1, 0], this.view);
-    perspective(FOV, aspect, 1, 12000, this.projection);
+    lookAt(this.eye, this.target, [0, 1, 0], this.view);
+    perspective(this.fov, aspect, 1, 20000, this.projection);
   }
 
   /** Nudge the camera from the keyboard. */
@@ -85,7 +113,7 @@ export class CameraRig {
 
   zoom(factor: number): void {
     this.idle = 0;
-    this.targetDistance = clamp(this.targetDistance * factor, MIN_DISTANCE, MAX_DISTANCE);
+    this.targetDistance = clamp(this.targetDistance * factor, this.shot.distance * 0.3, this.shot.distance * 3);
   }
 
   private onDown(e: PointerEvent): void {
