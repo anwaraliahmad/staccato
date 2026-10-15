@@ -1,11 +1,17 @@
 {
   "name": "staccato",
-  "version": "1.0.0",
-  "description": "WebGL music visualizer",
-  "main": "script.js",
+  "version": "2.0.0",
+  "description": "A WebGL music visualizer: FFT data from the Web Audio API, hand-written GLSL, wireframes.",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "gh-build": "webpack --config webpack.prod.js",
-    "server": "webpack server --config webpack.dev.js --host=0.0.0.0"
+    "dev": "vite --host",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview --host",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "npm run typecheck && vitest run"
   },
   "repository": {
     "type": "git",
@@ -15,42 +21,10 @@
   "license": "MIT",
   "homepage": "https://github.com/anwaraliahmad/staccato#readme",
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.49.0",
-    "@typescript-eslint/parser": "^5.49.0",
-    "babel-cli": "^6.26.0",
-    "babel-core": "^6.26.3",
-    "babel-preset-env": "^1.7.0",
-    "babel-preset-es2015": "^6.24.1",
-    "babelify": "^10.0.0",
-    "browser-sync": "^2.27.11",
-    "browserify": "^17.0.0",
-    "copy-webpack-plugin": "^11.0.0",
-    "eslint": "^8.32.0",
-    "eslint-config-standard-with-typescript": "^33.0.0",
-    "eslint-plugin-import": "^2.27.5",
-    "eslint-plugin-n": "^15.6.1",
-    "eslint-plugin-promise": "^6.1.1",
-    "gulp": "^4.0.2",
-    "gulp-sourcemaps": "^3.0.0",
-    "gulp-streamify": "^1.0.2",
-    "gulp-typescript": "^6.0.0-alpha.1",
-    "gulp-uglify": "^3.0.2",
-    "three": "^0.149.0",
-    "ts-loader": "^9.4.2",
-    "tsify": "^5.0.4",
-    "typescript": "^4.9.4",
-    "vinyl-buffer": "^1.0.1",
-    "vinyl-source-stream": "^2.0.0",
-    "webpack": "^5.75.0",
-    "webpack-cli": "^5.0.1",
-    "webpack-dev-server": "^4.11.1",
-    "webpack-merge": "^5.8.0"
-  },
-  "dependencies": {
-    "@types/three": "^0.146.0",
-    "fancy-log": "^2.0.0",
-    "npx": "^10.2.2",
-    "stats.js": "^0.17.0",
-    "watchify": "^4.0.0"
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.20.5",
+    "typescript": "~5.9",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
   }
 }

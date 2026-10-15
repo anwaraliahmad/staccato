@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<title>Staccato</title>
+	<meta name="description" content="A WebGL music visualizer: Fourier transform data from the Web Audio API, hand-written GLSL, wireframes. Since 2016.">
+	<meta name="theme-color" content="#0c0c0c">
+	<!-- Main font thanks to Google Fonts (fonts.google.com) -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@100;200;400&display=swap" rel="stylesheet">
+	<!-- Created via favicon.cc -->
+	<link href="./favicon.ico" rel="icon" type="image/x-icon">
+	<link href="./src/styles.css" rel="stylesheet">
+</head>
+
+<body>
+	<canvas id="stage" aria-label="Visualization. Drag to orbit, scroll to zoom."></canvas>
+
+	<header class="bar">
+		<h1>Staccato <span class="tagline">// drag + drop a song // pick a shader // enjoy</span></h1>
+		<nav id="scenes" class="scenes" aria-label="Scene"></nav>
+		<nav class="sources" aria-label="Sound source">
+			<button type="button" data-source="file" title="Open a song (O)">file</button>
+			<button type="button" data-source="mic" title="Listen to the microphone (M)">mic</button>
+			<button type="button" data-source="tab" title="Listen to another tab (T)">tab</button>
+			<button type="button" data-source="demo" title="Play the pizzicato demo (D)">demo</button>
+			<button type="button" id="help-button" title="Keys (?)">?</button>
+		</nav>
+		<p id="status" role="status" aria-live="polite"></p>
+	</header>
+
+	<aside id="shapes" class="side-bar left prevent-select" aria-label="Objects and shapes">
+		<ul class="objects"></ul>
+		<h3>shape</h3>
+		<ul class="geometries"></ul>
+	</aside>
+
+	<aside id="shaders" class="side-bar right prevent-select" aria-label="Shaders">
+		<ul></ul>
+		<button type="button" id="add-shader" title="Generate a new shader (G)">+</button>
+	</aside>
+
+	<section id="editor" hidden aria-label="Shader editor">
+		<header>
+			<span id="editor-title"></span>
+			<span class="editor-actions">
+				<button type="button" id="editor-revert">revert</button>
+				<button type="button" id="editor-close" title="Close (Esc)">close</button>
+			</span>
+		</header>
+		<div class="panes">
+			<label><span>vertex</span><textarea id="editor-vertex" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea></label>
+			<label><span>fragment</span><textarea id="editor-fragment" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea></label>
+		</div>
+		<ol id="editor-errors"></ol>
+	</section>
+
+	<div class="impressum">
+		<small>Impressum:</small>
+		<h2>Anwar Ali-Ahmad</h2>
+	</div>
+
+	<dialog id="help">
+		<h2>Staccato</h2>
+		<p>Drop a song anywhere, or pick a source up top. Pick a scene from the bar. Its objects are on the
+		left: pick one, then give it any shape (below them) or any shader (on the right), while the music plays.
+		Drag to orbit, scroll to zoom.</p>
+		<dl>
+			<dt>space</dt><dd>play / pause</dd>
+			<dt>o m t d</dt><dd>file, microphone, tab audio, demo</dd>
+			<dt>b</dt><dd>next scene</dd>
+			<dt>s</dt><dd>next object</dd>
+			<dt>x</dt><dd>next shape for the selected object</dd>
+			<dt>1 – 9</dt><dd>shader for the selected object</dd>
+			<dt>g</dt><dd>generate a shader</dd>
+			<dt>e</dt><dd>edit the selected object's GLSL</dd>
+			<dt>c</dt><dd>wire, chrome, glass, paint — with or without wire</dd>
+			<dt>v</dt><dd>show / hide the selected object</dd>
+			<dt>l</dt><dd>frequency scale: log / linear (2016)</dd>
+			<dt>r</dt><dd>record a clip</dd>
+			<dt>h</dt><dd>hide everything but the music</dd>
+			<dt>f</dt><dd>fullscreen</dd>
+			<dt>← → ↑ ↓ − =</dt><dd>orbit and zoom</dd>
+		</dl>
+		<p class="fine">Shaders get <code>time</code>, <code>frequency(bin)</code> (dB, bins 0–511), <code>spectrum(t)</code>, <code>echo(t, age)</code>,
+			<code>level</code>, <code>onset</code>, <code>bass</code>, <code>mid</code>, <code>treble</code>, <code>size</code>, <code>instance</code>, <code>mouse</code>.
+			2016-style GLSL (<code>varying</code>, <code>gl_FragColor</code>) works as-is.
+			<a href="https://github.com/anwaraliahmad/staccato" target="_blank" rel="noopener">Source</a>.</p>
+		<form method="dialog"><button>ok</button></form>
+	</dialog>
+
+	<input type="file" id="file-input" accept="audio/*,video/*" hidden>
+
+	<noscript><p class="fallback">Staccato needs JavaScript and WebGL2.</p></noscript>
+
+	<script type="module" src="./src/main.ts"></script>
+</body>
+</html>
