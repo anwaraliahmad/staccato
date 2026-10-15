@@ -25,6 +25,7 @@ jobs:
       - run: npx playwright test
         env:
           CI: 'true'
+      - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         with:
